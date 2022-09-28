@@ -14,8 +14,9 @@ async function oAuthRequest(request, reply){
     //redirect to bungie AuthO portal.
     let [url, state] = d2helper.AuthORedirectURL();
     request.session.state = state;
-    console.log(request.session.state);
-    return reply.redirect(url);
+    console.log(request.session.sessionId);
+    return reply.redirect("https://trenton44.github.io/Fastify-Destiny/");
+    //return reply.redirect("url");
 }
 async function oAuthResponse(request, reply){
     if(request.session.state != decodeURIComponent(request.query.state)){

@@ -3,8 +3,8 @@
 const path = require ('path');
 const fastify = require('fastify'); //fastify objects aren't instantiated here, just passed, so i don't use this call. But nodejs throws a fit if it isn't here, so here we are.
 
-const handler = require('./handlers.js');
-const helper = require(path.join(__dirname, '..', 'helper_functions.js'));
+const handler = require('./server_handlers.js');
+const helper = require(path.join(__dirname, './helper_functions.js'));
 const d2helper = require(path.join(__dirname, './bungie_api/wrapper.js'));
 
 
@@ -12,6 +12,9 @@ const d2helper = require(path.join(__dirname, './bungie_api/wrapper.js'));
 let api_noauth = (fastify, options, next) => {
     fastify.addHook('preHandler', async function(request, reply){
         //nothing necessary here atm, but I'm keeping it for consistency with authorized endpoints
+        console.log("Hello from ");
+        console.log(request.session);
+
         return true;
     });
     //these two /api endpoints are for authorizing with the bungie api, and processing the response from bungie
@@ -26,7 +29,8 @@ let webpage_noauth = (fastify, options, next) => {
     fastify.addHook('preHandler', async function(request, reply){
         //nothing necessary here atm, but I'm keeping it for consistency with authorized endpoints
     });
-    fastify.get('/login', async function(request, reply){ return reply.sendFile("index.html"); });
+    fastify.get("/", async function(request, reply){ return reply.send("Hello World!"); });
+    fastify.get('/login', async function(request, reply){ return reply.send("Hello World!"); });
 
     next();
 }
@@ -42,7 +46,6 @@ let api_auth = (fastify, options, next) => {
     fastify.get('/api/profileData', handler.api_profileData);
     fastify.get('/api/characterIds', handler.api_characterIds); //needs a schema verifying request had d2_membership_id as a querystring
     fastify.get('/api/characterData', handler.api_characterData); //needs a schema verifying request has querystring with d2_membership_id and characterId
-    fastify.get('/api/test', handler.test);
     //Catch all 404 response
     fastify.get('/api/*', async (request, reply) => { return reply.code(404).send({error: "endpoint not found."}); });
 

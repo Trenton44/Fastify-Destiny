@@ -1,5 +1,5 @@
 const path = require ('path');
-const d2helper = require(path.join(__dirname, '..', '/bungie_api/wrapper.js'));
+const d2helper = require(path.join(__dirname, '/bungie_api/wrapper.js'));
 
 async function validateTokens(session_store){
     //if auth_data isn't set, user has never logged in.
