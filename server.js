@@ -16,6 +16,8 @@ const endpoints = require("./server_endpoints.js");
 //Static file locations 
 const compiled_front_end = path.join(__dirname, '..', '/react_frontend/build');
 
+const isDevEnv = (process.env.ENVIORNMENT == "development");
+isDevEnv || console.log("We are in a PRODUCTION ENVIORNMENT!");
 //Setup Logging for dev/production enviornments
 const loggerEnv = {
     development: {
@@ -29,7 +31,7 @@ const loggerEnv = {
     },
     production: true,
     test: false
-}
+};
 
 //Initialize fastify and require https connection
 const server_app = fastify({
