@@ -14,9 +14,7 @@ async function oAuthRequest(request, reply){
     //redirect to bungie AuthO portal.
     let [url, state] = d2helper.AuthORedirectURL();
     request.session.state = state;
-    console.log(request.session.sessionId);
-    return reply.redirect("https://trenton44.github.io/Fastify-Destiny/");
-    //return reply.redirect("url");
+    return reply.redirect(url);
 }
 async function oAuthResponse(request, reply){
     if(request.session.state != decodeURIComponent(request.query.state)){
@@ -28,7 +26,7 @@ async function oAuthResponse(request, reply){
         //save or overwrite session's token data
         helper.saveTokenData(request.session, result.data); 
         //redirect to root, which will cause prehandler to obtain d2_membership_id, and root will reroute to /user/:id
-        return reply.code(303).redirect("/");
+        return reply.code(303).redirect(process.env.FRONTEND_SERVER);
     }).catch( (error) => { 
         //Something went wrong, just display error text on the screen
         console.log(error);
@@ -93,4 +91,8 @@ async function api_characterData(request, reply){
     });
 }
 
-module.exports = {api_characterIds, api_characterData, api_profileData, oAuthRequest, oAuthResponse};
+async function returnD2ID(request, reply){
+    //The prehandler should have verified that membership_id and a d2_id exist in the session, so this endpoint is just to return the d2 id.
+    return reply.send({d2_membership_id: request.session.d2_account.id});
+}
+module.exports = {returnD2ID, api_characterIds, api_characterData, api_profileData, oAuthRequest, oAuthResponse};

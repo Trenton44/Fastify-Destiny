@@ -33,6 +33,7 @@ const loggerEnv = {
     test: false
 };
 
+
 //Initialize fastify and require https connection
 const server_app = fastify({
     logger: loggerEnv[process.env.ENVIORNMENT] ?? true,
@@ -83,9 +84,7 @@ server_app.register(cors, {
 
 //register all endpoints with this instance of fastify.
 server_app.register(endpoints.api_auth);
-//server_app.register(endpoints.webpage_auth);
 server_app.register(endpoints.api_noauth);
-server_app.register(endpoints.webpage_noauth);
 
 //Start server
 server_app.listen({ port: process.env.PORT_NUMBER, host: '0.0.0.0' }, function(error, address){
