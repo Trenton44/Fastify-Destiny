@@ -58,7 +58,7 @@ server_app.register(fastifySession,{
         httpOnly: true,
         secure: true,
         sameSite: 'None',
-        //domain: "https://trenton44.github.io/Fastify-Destiny/"
+        domain: "https://trenton44.github.io/Fastify-Destiny/"
     },
     store: mongo_store.create({
         mongoUrl: process.env.MONGO_DB_URL,
@@ -69,13 +69,13 @@ server_app.register(fastifySession,{
             sslKey: process.env.SESSION_STORE_CERT,
             sslCert: process.env.SESSION_STORE_CERT,
         },
-        crypto: { secret: process.env.SESSION_STORE_SECRET }
+        //crypto: { secret: process.env.SESSION_STORE_SECRET }
     }),
 });
 
 //register plugin to allow delivery of static content (aka: the front-end)
 server_app.register(cors, {
-    origin: ["https://trenton44.github.io"],
+    origin: "https://trenton44.github.io",
     methods: ["GET"],
     //credentials: true, //may remove
     strictPreflight: true

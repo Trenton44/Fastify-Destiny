@@ -7,7 +7,7 @@ const helper = require(path.join(__dirname, 'helper_functions.js'));
 const d2helper = require(path.join(__dirname, './bungie_api/wrapper.js'));
 const d2api = require(path.join(__dirname, './bungie_api/api.js'));
 const data_processor = require(path.join(__dirname, './bungie_api/dataMap.js'));
-const data_transformer = require("./bungie_api/dataTransform.js");
+const data_transformer = require("./bungie_api/backendTransformations.js");
 
 //FOLLOWING ENDPOINTS DO NOT REQUIRE AUTHORIZATION TO ACCESS
 async function oAuthRequest(request, reply){
@@ -17,20 +17,21 @@ async function oAuthRequest(request, reply){
     return reply.redirect(url);
 }
 async function oAuthResponse(request, reply){
+    console.log();
     if(request.session.state != decodeURIComponent(request.query.state)){
-        request.session.destroy()
-        return reply.code(400).send("Unable to validate session, user must re-authenticate.");
+        request.session.destroy();
+        return reply.code(400).send({error: "Unable to validate session, user must re-authenticate."});
     }
     return d2helper.requestAccessToken(request.query.code)
     .then( (result) => { 
         //save or overwrite session's token data
         helper.saveTokenData(request.session, result.data); 
-        //redirect to root, which will cause prehandler to obtain d2_membership_id, and root will reroute to /user/:id
+        request.log.warn("SUCCESSFULLY SAVE ACCESS TOKEN.");
         return reply.code(303).redirect(process.env.FRONTEND_SERVER);
     }).catch( (error) => { 
         //Something went wrong, just display error text on the screen
         console.log(error);
-        return reply.code(400).send("unable to obtain access token."); 
+        return reply.code(400).send({error: "unable to obtain access token."}); 
     });
 }
 
@@ -47,7 +48,7 @@ async function api_characterIds(request, reply){
         let data = result.data.Response.profile.data;
         return data.characterIds;
     }).catch( (error) => {
-        return error;
+        return Promise.reject(error);
     });
 }
 
@@ -65,7 +66,7 @@ async function api_profileData(request, reply){
         return parsed_data;
     }).catch( (error) => {
         console.log(error);
-        return Error("Nope.");
+        return Promise.reject("Nope.");
     });
 }
 async function api_characterData(request, reply){
@@ -87,12 +88,16 @@ async function api_characterData(request, reply){
         return parsed_data;
     }).catch( (error) => {
         console.log(error)
-        return Error("unable to get character data.");
+        return Promise.reject("unable to get character data.");
     });
 }
 
 async function returnD2ID(request, reply){
+    console.log("ID: "+request.session.sessionId);
+    console.log("here");
     //The prehandler should have verified that membership_id and a d2_id exist in the session, so this endpoint is just to return the d2 id.
+    if(request.session.d2_account == undefined)
+        return reply.code(400).send({error: "account does not exist."});
     return reply.send({d2_membership_id: request.session.d2_account.id});
 }
 module.exports = {returnD2ID, api_characterIds, api_characterData, api_profileData, oAuthRequest, oAuthResponse};

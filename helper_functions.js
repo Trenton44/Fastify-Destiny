@@ -1,10 +1,10 @@
 const path = require ('path');
-const d2helper = require(path.join(__dirname, '/bungie_api/wrapper.js'));
+const d2helper = require(path.join(__dirname, './bungie_api/wrapper.js'));
 
 async function validateTokens(session_store){
     //if auth_data isn't set, user has never logged in.
     if(session_store.auth_data == undefined) {
-        return Promise.reject("Not authorized to access");
+        return Promise.reject({error: "Not authorized to access"});
     }
 
     //User has logged in previously, check to make sure access/refresh tokens are still valid.
@@ -15,14 +15,14 @@ async function validateTokens(session_store){
         
         //If it's expired, nothing we can do, they gotta log back in
         if(Date.now() > rt_expire) {
-            return Error("Refresh token expired, user will need to re-authenticate");
+            return Promise.reject({error: "Refresh token expired, user will need to re-authenticate"});
         }
         //refresh token is still valid, obtain new access/refresh from bungie api.
         return d2helper.requestRefreshToken(session_store.auth_data.refresh_token)
         .then( (result) => {
             saveTokenData(session_store, result.data);
             return true;
-        }).catch( (error) => { return error; });
+        }).catch( (error) => { return Promise.reject(error); });
         //Save the token data & bungie membership_id to the session store
     }
 }
