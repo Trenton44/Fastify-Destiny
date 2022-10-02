@@ -1,5 +1,5 @@
 // each variable in this file is set to the desired response format of a given endpoint.
-const d2_definitions = require("./manifest/en/jsonWorldContent.json"); 
+const d2_definitions = require("./manifest/en/world_content.json"); 
 
 const bungie_root = "https://www.bungie.net";
 
