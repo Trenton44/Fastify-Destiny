@@ -14,7 +14,7 @@ let api_noauth = (fastify, options, next) => {
     //these two /api endpoints are for authorizing with the bungie api, and processing the response from bungie
     fastify.get('/api/login', handler.oAuthRequest);
     fastify.get('/api/login_response', handler.oAuthResponse);
-    fastify.get('/api/authvalidated', handler.returnD2ID);
+    
     fastify.get('/api/*', async (request, reply) => { return reply.code(404).send({error: "endpoint not found."}); });
     next();
 };
@@ -29,6 +29,7 @@ let api_auth = (fastify, options, next) => {
     fastify.get('/api/profileData', handler.api_profileData);
     fastify.get('/api/characterIds', handler.api_characterIds); //needs a schema verifying request had d2_membership_id as a querystring
     fastify.get('/api/characterData', handler.api_characterData); //needs a schema verifying request has querystring with d2_membership_id and characterId
+    fastify.get('/api/authvalidated', handler.returnD2ID);
     //Catch all 404 response
     
 
@@ -38,8 +39,9 @@ let api_auth = (fastify, options, next) => {
 
 //validates access to the endpoints contained in this file.
 async function validateAPIEndpointAccess(request, reply){
-    request.log.warn(request.session);
-    request.log.warn("VALIDATING ACCESS: "+request.sessionId);
+    request.log.warn("VALIDATING ACCESS: "+request.session.sessionId);
+    if(request.session.auth_data == undefined)
+        return reply.code(400).send({error: "you have not given authorization to this API yet."});
     return helper.validateTokens(request.session)
     .then( (result) => {
         request.log.warn("tokens validated.");
