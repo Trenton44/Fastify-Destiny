@@ -15,7 +15,13 @@ const endpoints = require("./server_endpoints.js");
 
 const logger = {
     development: {
-
+        transport: {
+            target: "pino-pretty",
+            options: {
+              translateTime: "HH:MM:ss Z",
+              ignore: "pid,hostname",
+            },
+          },
     },
     production: {
 
@@ -88,6 +94,12 @@ if(process.env.NODE_ENV == "production"){
       });
 }
 
+//serve front-end on development instance, in production these will be seperated concerns
+if(process.env.NODE_ENV == "development"){
+    const compiled_front_end = path.join(__dirname, '..', '/react_frontend/build');
+    server_app.register(require('@fastify/static'), { root: compiled_front_end, prefix: '/assets/' });
+    server_app.get('/*', async (request, reply) => { return reply.sendFile("index.html"); })
+}
 //register all endpoints with this instance of fastify.
 server_app.register(endpoints.api_auth);
 server_app.register(endpoints.api_noauth);
