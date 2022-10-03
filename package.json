@@ -15,7 +15,8 @@
     "start": "node server.js",
     "build": "",
     "devstart": "nodemon server.js",
-    "devtest": "nodemon testserver.js"
+    "predeploy": "",
+    "deploy": "node server.js"
   },
   "devDependencies": {
     "nodemon": "^2.0.20",

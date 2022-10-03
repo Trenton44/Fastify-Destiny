@@ -3,3 +3,5 @@
 /node_modules
 bungie_api/manifest/
 .env
+*.pem
+dockertoAWS.sh
