@@ -12,10 +12,9 @@ let api_noauth = (fastify, options, next) => {
     //nothing necessary in the prehandler atm, but I'm keeping it for consistency with authorized endpoints
     fastify.addHook('preHandler', async function(request, reply){ return true; });
     //these two /api endpoints are for authorizing with the bungie api, and processing the response from bungie
-    fastify.get('/api/login', handler.oAuthRequest);
-    fastify.get('/api/login_response', handler.oAuthResponse);
-    
-    fastify.get('/api/*', async (request, reply) => { return reply.code(404).send({error: "endpoint not found."}); });
+    fastify.get('/login', handler.oAuthRequest);
+    fastify.get('/login_response', handler.oAuthResponse);
+    fastify.get('/awshealthcheck', async(request, reply) => { return reply.send("ok"); }  )
     next();
 };
 
@@ -26,10 +25,10 @@ let api_auth = (fastify, options, next) => {
     //returns error if validation fails.
     fastify.addHook('preHandler', validateAPIEndpointAccess);
     //endpoints accessible to appliation
-    fastify.get('/api/profileData', handler.api_profileData);
-    fastify.get('/api/characterIds', handler.api_characterIds); //needs a schema verifying request had d2_membership_id as a querystring
-    fastify.get('/api/characterData', handler.api_characterData); //needs a schema verifying request has querystring with d2_membership_id and characterId
-    fastify.get('/api/authvalidated', handler.returnD2ID);
+    fastify.get('/profileData', handler.api_profileData);
+    fastify.get('/characterIds', handler.api_characterIds); //needs a schema verifying request had d2_membership_id as a querystring
+    fastify.get('/characterData', handler.api_characterData); //needs a schema verifying request has querystring with d2_membership_id and characterId
+    fastify.get('/authvalidated', handler.returnD2ID);
     //Catch all 404 response
     
 

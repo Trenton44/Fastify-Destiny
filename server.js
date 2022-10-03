@@ -104,6 +104,9 @@ if(process.env.NODE_ENV == "development"){
     server_app.register(require('@fastify/static'), { root: compiled_front_end, prefix: '/assets/' });
     server_app.get('/*', async (request, reply) => { return reply.sendFile("index.html"); })
 }
+else{
+    server_app.get('/*', async (request, reply) => { return reply.code(404).send({error: "endpoint not found."}); });
+}
 //register all endpoints with this instance of fastify.
 server_app.register(endpoints.api_auth);
 server_app.register(endpoints.api_noauth);
