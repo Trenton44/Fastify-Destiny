@@ -5,3 +5,7 @@ bungie_api/manifest/
 .env
 *.pem
 dockertoAWS.sh
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
