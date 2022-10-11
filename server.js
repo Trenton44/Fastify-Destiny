@@ -113,6 +113,6 @@ server_app.register(endpoints.api_noauth);
 
 //Start server
 server_app.listen(
-    { port: process.env.PORT_NUMBER, host: "0.0.0.0" },
+    { port: process.env.PORT_NUMBER, host: process.env.HOST },
     function (error, address) { if (error) { console.log(error); process.exit(1); } }
 );

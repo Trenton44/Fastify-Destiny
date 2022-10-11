@@ -3,3 +3,4 @@
 .dockerignore
 .gitignore
 dockertoAWS.sh
+.env

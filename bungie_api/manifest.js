@@ -4,7 +4,6 @@ var manifest = require("./manifest.json");
 const { Console } = require("console");
 var bungie = "https://www.bungie.net";
 
-let promises = [];
 for (i in manifest.Response.jsonWorldContentPaths) {
   let path = manifest.Response.jsonWorldContentPaths[i];
   path = bungie + path;
@@ -19,13 +18,5 @@ for (i in manifest.Response.jsonWorldContentPaths) {
     }
     console.log(`stdout: ${stdout}`);
   });
-  //promises.push(request);
-  //console.log("next up: "+manifest.Response.jsonWorldContentPaths[i+1]);
 }
 
-Promise.all(promises)
-.then( (result) => {
-  console.log("Completed.");
-  process.exit(0);
-} )
-.catch( (error) => console.error(error) );
