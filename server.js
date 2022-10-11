@@ -15,13 +15,13 @@ const endpoints = require("./server_endpoints.js");
 
 const logger = {
     development: {
-        transport: {
+        /*transport: {
             target: "pino-pretty",
             options: {
               translateTime: "HH:MM:ss Z",
               ignore: "pid,hostname",
             },
-          },
+          },*/
     },
     production: {
 
@@ -32,6 +32,12 @@ const logger = {
 }
 
 //Initialize fastify and require https connection
+let trustProxy = false;
+if(process.env.NODE_ENV == "production"){
+    trustProxy = true;
+    console.log("trustProxy has been set to "+trustProxy);
+}
+    
 const server_app = fastify({
     logger: logger[process.env.NODE_ENV] ?? true,
     https: {
@@ -39,6 +45,7 @@ const server_app = fastify({
       key: fs.readFileSync(process.env.HTTPS_KEY_PATH),
       cert: fs.readFileSync(process.env.HTTPS_CERT_PATH),
     },
+    trustProxy: trustProxy
 }); 
 
 const cookie = {
@@ -53,7 +60,6 @@ const cookie = {
             httpOnly: true,
             secure: true,
             sameSite: "strict",
-            //domain: "https://trenton44.github.io/Fastify-Destiny/",
         },
     },
     production: {
@@ -67,7 +73,7 @@ const cookie = {
             httpOnly: true,
             secure: true,
             sameSite: "None",
-            //domain: "https://trenton44.github.io/Fastify-Destiny/",
+            domain: "https://trenton44.github.io/Fastify-Destiny/",
         },
         store: mongo_store.create({
             mongoUrl: process.env.MONGO_DB_URL,
