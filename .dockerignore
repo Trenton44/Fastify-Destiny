@@ -1,5 +1,6 @@
 /dev_assets
 /node_modules
+/bungie_api/manifest
 .dockerignore
 .gitignore
 dockertoAWS.sh

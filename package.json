@@ -15,7 +15,7 @@
     "start": "node server.js",
     "build": "",
     "devstart": "nodemon server.js",
-    "predeploy": "",
+    "predeploy": "node bungie_api/manifest.js",
     "deploy": "node server.js"
   },
   "devDependencies": {
