@@ -17,7 +17,6 @@ async function oAuthRequest(request, reply){
     return reply.redirect(url);
 }
 async function oAuthResponse(request, reply){
-    console.log();
     if(request.session.state != decodeURIComponent(request.query.state)){
         request.session.destroy();
         return reply.code(400).send({error: "Unable to validate session, user must re-authenticate."});
@@ -26,7 +25,7 @@ async function oAuthResponse(request, reply){
     .then( (result) => { 
         //save or overwrite session's token data
         helper.saveTokenData(request.session, result.data); 
-        request.log.warn("SUCCESSFULLY SAVE ACCESS TOKEN.");
+        request.log.warn("SUCCESSFULLY SAVED ACCESS TOKEN.");
         return reply.code(303).redirect(process.env.FRONTEND_SERVER);
     }).catch( (error) => { 
         //Something went wrong, just display error text on the screen
@@ -56,7 +55,7 @@ async function api_profileData(request, reply){
     let d2_membership_id = request.query.d2_membership_id;
     let membership_type = request.session.user_data.d2_account.membership_type;
     let token = request.session.auth_data.access_token;
-    let list = { compoents: ["100", "102", "103", "200", "201", "203", "205", "300"]};
+    let list = { components: ["100", "102", "103", "200", "201", "203", "205", "300"]};
     return d2api.GetProfile(token, d2_membership_id, list, membership_type)
     .then( (result) => {
         let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
@@ -96,8 +95,8 @@ async function returnD2ID(request, reply){
     console.log("ID: "+request.session.sessionId);
     console.log("here");
     //The prehandler should have verified that membership_id and a d2_id exist in the session, so this endpoint is just to return the d2 id.
-    if(request.session.d2_account == undefined)
+    if(request.session.user_data.d2_account == undefined)
         return reply.code(400).send({error: "account does not exist."});
-    return reply.send({d2_membership_id: request.session.d2_account.id});
+    return reply.send({d2_membership_id: request.session.user_data.d2_account.id});
 }
 module.exports = {returnD2ID, api_characterIds, api_characterData, api_profileData, oAuthRequest, oAuthResponse};

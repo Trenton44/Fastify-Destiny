@@ -41,7 +41,7 @@ async function validateAPIEndpointAccess(request, reply){
     request.log.warn("VALIDATING ACCESS: "+request.session.sessionId);
     if(request.session.auth_data == undefined)
         return reply.code(400).send({error: "you have not given authorization to this API yet."});
-    return helper.validateTokens(request.session)
+    let result = await helper.validateTokens(request.session)
     .then( (result) => {
         request.log.warn("tokens validated.");
         //check for membership_id. this should be obtained with the access tokens
@@ -52,8 +52,9 @@ async function validateAPIEndpointAccess(request, reply){
         // ensure that at least one d2 account has data stored in this session.
         // validating that passed data from the frontend matches the session's will be the problem of the endpoints,
         // we just want to ensure something is there as a minimum.
-        if(request.session.user_data.d2_account != undefined)
+        if(request.session.user_data.d2_account != undefined){
             return true;
+        }
 
         request.log.warn("no data found, but we know membership_id exists, so we will pull d2 data from bungie.")
         return d2helper.getD2MembershipData(request.session.auth_data.access_token, request.session.user_data.membership_id)
@@ -66,9 +67,10 @@ async function validateAPIEndpointAccess(request, reply){
         });
     }).catch( (error) => {
         //return the error response generated in validateTokens to frontend
-        request.log.warn("nope, we failed.");
+        request.log.warn({error: "nope, we failed."});
         return reply.code(400).send(error);
     });
+    return result;
 }
 
 module.exports = {api_noauth, api_auth};

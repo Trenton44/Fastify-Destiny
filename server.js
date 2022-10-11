@@ -73,7 +73,7 @@ const cookie = {
             httpOnly: true,
             secure: true,
             sameSite: "None",
-            domain: "https://trenton44.github.io/Fastify-Destiny/",
+            //domain: process.env.FRONTEND_SERVER
         },
         store: mongo_store.create({
             mongoUrl: process.env.MONGO_DB_URL,
@@ -84,7 +84,7 @@ const cookie = {
             //sslKey: process.env.SESSION_STORE_CERT,
             //sslCert: process.env.SESSION_STORE_CERT,
             },
-            //crypto: { secret: process.env.SESSION_STORE_SECRET }
+            crypto: { secret: process.env.SESSION_STORE_SECRET }
         }),
     },
     testing: {
@@ -99,7 +99,7 @@ if(process.env.NODE_ENV == "production"){
     server_app.register(cors, {
         origin: "https://trenton44.github.io",
         methods: ["GET"],
-        //credentials: true, //may remove
+        credentials: true, //may remove
         strictPreflight: true,
       });
 }
