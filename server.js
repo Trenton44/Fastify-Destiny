@@ -68,12 +68,12 @@ const cookie = {
         //cookiePrefix: "s:", //for compatibility with express-session
         saveUninitialized: true,
         cookie: {
-            path: "/",
+            path: "/Fastify-Destiny/",
             maxAge: 3600000, //1 Hour in milliseconds
             httpOnly: true,
             secure: true,
             sameSite: "None",
-            //domain: process.env.FRONTEND_SERVER
+            domain: "https://trenton44.github.io"
         },
         store: mongo_store.create({
             mongoUrl: process.env.MONGO_DB_URL,
@@ -101,7 +101,7 @@ if(process.env.NODE_ENV == "production"){
         methods: ["GET"],
         credentials: true, //may remove
         strictPreflight: true,
-      });
+    });
 }
 
 //serve front-end on development instance, in production these will be seperated concerns
@@ -111,7 +111,8 @@ if(process.env.NODE_ENV == "development"){
     server_app.get('/*', async (request, reply) => { return reply.sendFile("index.html"); })
 }
 else{
-    server_app.get('/*', async (request, reply) => { return reply.code(404).send({error: "endpoint not found."}); });
+    server_app.get('/', async (request, reply) => { return reply.code(200); }); //use the root as a health check, and to set cookies on first access
+    server_app.get('/*', async (request, reply) => { return reply.code(404); }); //Catch-all 404 response
 }
 //register all endpoints with this instance of fastify.
 server_app.register(endpoints.api_auth);

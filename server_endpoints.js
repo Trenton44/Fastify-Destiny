@@ -14,7 +14,6 @@ let api_noauth = (fastify, options, next) => {
     //these two /api endpoints are for authorizing with the bungie api, and processing the response from bungie
     fastify.get('/login', handler.oAuthRequest);
     fastify.get('/login_response', handler.oAuthResponse);
-    fastify.get('/awshealthcheck', async(request, reply) => { return reply.send("ok"); }  )
     next();
 };
 
