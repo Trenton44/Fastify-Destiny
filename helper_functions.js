@@ -1,4 +1,5 @@
 const path = require ('path');
+const fs = require ('fs');
 const d2helper = require(path.join(__dirname, './bungie_api/wrapper.js'));
 
 async function validateTokens(session_store){
@@ -40,5 +41,17 @@ function saveTokenData(session_store, token_data){
     session_store.user_data.membership_id = token_data.membership_id;
     session_store.cookie.maxAge = session_store.auth_data.refresh_exipration;
     return true;
+}
+
+function AWSTransferSSL(private, public){
+    try{
+        fs.writeFileSync(process.env.HTTPS_KEY_PATH, private);
+        fs.writeFileSync(process.env.HTTPS_CERT_PATH, public);
+    }
+    catch {
+        console.error("UNABLE TO SAVE SSL CERT TO INSTANCE");
+        process.exit(1);
+    }
+    
 }
 module.exports = {validateTokens, saveTokenData};

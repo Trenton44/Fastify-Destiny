@@ -18,6 +18,7 @@ async function oAuthRequest(request, reply){
 }
 async function oAuthResponse(request, reply){
     if(request.session.state != decodeURIComponent(request.query.state)){
+        console.log("States "+request.session.state+" (session) and "+decodeURIComponent(request.query.state)+" (query) did not match! destroying session.");
         request.session.destroy();
         return reply.code(400).send({error: "Unable to validate session, user must re-authenticate."});
     }
