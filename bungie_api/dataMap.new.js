@@ -1,3 +1,4 @@
+const api_doc = require("./openapi.json");
 // Helper functions for parsing/interacting with data
 
 //  Traverses through a given object, one key at a time (using an array of keys), to find a key-value. 
@@ -15,10 +16,10 @@ function traverseObject(keylist, searchObj){
 //  Ex: if our data is stored at components.schemas.DestinyItemComponent
 //  then in the config object, we would have components.schemas.DestinyItemComponent.transform = function(data) { "code to transform the data" }
 //  
-function transformFromConfig(key_array, schema, data, configObj){
-    key_array = key_array.slice(0); //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
-    key_array.push("transform"); //The keyword the function is stored in. Note: This will be a problem if the data has a proprty "transform" already.
-    let reference = traverseObject(key_array, configObj);
+function transformFromConfig(key_array, schema, data, config){
+    temp_key_array = key_array.slice(0); //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
+    temp_key_array.push("transform"); //The keyword the function is stored in. Note: This will be a problem if the data has a proprty "transform" already.
+    let reference = traverseObject(temp_key_array, config);
     if(!reference) //if no configuration function exists, there's no transformation to be done. return data as-is
         return data;
     return reference(data); //call the transform function, return transformed data.
@@ -63,7 +64,7 @@ function Entrypoint(path, request_type, status_code, data, config){
         throw Error("Couldn't discover response ref");
     schema_ref_array = parseSchemaRef(response_ref);
     schema = traverseObject(schema_ref_array, api_doc);
-    return propertyProcessController(schema_ref_array, schema, data, config, false, true);
+    return propertyProcessController(schema_ref_array, schema, data, false, true, config);
 }
 
 //  This is where every new iteration goes through. The general idea is, JSON Schema Objects are just schemas holding other schemas
@@ -76,19 +77,12 @@ function propertyProcessController(key_array, schema, data, indexed, isNewSchema
     let node = [key_array, schema, data, indexed, isNewSchema];
     stack.push(node);
     for(let i = 0; i < stack.length; i++){
-        console.log("Stack length: "+stack.length);
-        console.log("Stack Status: ");
-        for(let z = 0; z < stack.length; z++){
-            console.log(stack[z]);
-        }
-        if(stack[i][1].type != "object" && stack[i][1].type != "array"){
-            continue; // it's a basic-type node, it won't have any children to process.
-        }
-        
+        if(stack[i][1].type != "object" && stack[i][1].type != "array"){ continue; } // it's a basic-type node, it won't have any children to process.
         stack.splice(i+1, 0, ...processByProperty(stack[i]));
     }
     while(stack.length != 0){
-        stack[stack.length - 1][2] = transformFromConfig(stack[stack.length - 1][0], stack[stack.length - 1][1], stack[stack.length - 1][2], stack[stack.length - 1][3], stack[stack.length - 1][4], config);
+        stack[stack.length - 1][2] = transformFromConfig(stack[stack.length - 1][0], stack[stack.length - 1][1], stack[stack.length - 1][2], config);
+        temp = stack[stack.length - 1];
         stack.pop();
     }
     return data; // might need to add a transformFromConfig here too.
@@ -244,3 +238,14 @@ function processKeywordAllOf(parameters){
         throw Error("First instance of allOf without a $ref, don't currently support this.");
     return [[key_array, schema, data, indexed, false]]; //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
+
+let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
+let request_type = "get";
+let code = "200";
+const test_data = require("./profileData.json");
+const config_objects = require('./backendTransformations.js');
+console.log("Get Profile: ");
+console.log(config_objects.GetProfile);
+let blah = Entrypoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
+const fs = require('fs');
+fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));

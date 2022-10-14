@@ -18,10 +18,10 @@ function traverseObject(keylist, searchObj){
 //  Ex: if our data is stored at components.schemas.DestinyItemComponent
 //  then in the config object, we would have components.schemas.DestinyItemComponent.transform = function(data) { "code to transform the data" }
 //  
-function transformFromConfig(key_array, schema, data, configObj){
+function transformFromConfig(key_array, schema, data, config){
     key_array = key_array.slice(0); //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
     key_array.push("transform"); //The keyword the function is stored in. Note: This will be a problem if the data has a proprty "transform" already.
-    let reference = traverseObject(key_array, configObj);
+    let reference = traverseObject(key_array, config);
     if(!reference) //if no configuration function exists, there's no transformation to be done. return data as-is
         return data;
     return reference(data); //call the transform function, return transformed data.
@@ -63,7 +63,7 @@ function dataIndexed(key_array, schema, data){
 //      -The $ref schema for the endpoint's Response
 //      -The $ref schema for the response's Response object
 //  Then pass that schema and array of keys leading to it in the JSON (api doc is in JSON), and begin processing the data.
-function processAPIEndpoint(path, request_type, status_code, endpoint_data){
+function processAPIEndpoint(path, request_type, status_code, endpoint_data, config){
     let key_array = ["paths", path, request_type, "responses", status_code, "$ref"];
     let api_path = traverseObject(key_array, api_doc);
     if(!api_path)
@@ -77,7 +77,7 @@ function processAPIEndpoint(path, request_type, status_code, endpoint_data){
         throw Error("Couldn't discover response ref");
     schema_ref_array = parseSchemaRef(response_ref);
     schema = traverseObject(schema_ref_array, api_doc);
-    return propertyProcessController(schema_ref_array, schema, endpoint_data, false, true);
+    return propertyProcessController(schema_ref_array, schema, endpoint_data, false, true, config);
 }
 
 //  This is where every new iteration goes through. The general idea is, JSON Schema Objects are just schemas holding other schemas
@@ -85,19 +85,19 @@ function processAPIEndpoint(path, request_type, status_code, endpoint_data){
 //  Furthermore, some of the schemas have an x-type-header that indicates if the corresponding data's keys are indexed.
 //  We need to know that, so "indexed" lets us figure that out. However, some schemas, like most arrays, just hold a reference to the actual data's schema.
 //  We need to pass the knowledge of being "indexed" along, so in cases where we aren't using a brand new schema (like processing array types or objects with additionalProperties), we pass "isNewSchema" as false, so "indexed" isn't reset.
-function propertyProcessController(key_array, schema, data, indexed, isNewSchema){
+function propertyProcessController(key_array, schema, data, indexed, isNewSchema, config){
     if(isNewSchema)
         indexed = dataIndexed(key_array, schema, data);
     switch(schema.type){
         case "object":
-            data = processObjectSchema(key_array, schema, data, indexed);
-            return transformFromConfig(key_array, schema, data, transformConfig);
+            data = processObjectSchema(key_array, schema, data, indexed, config);
+            return transformFromConfig(key_array, schema, data, config);
         case "array":
-            data = processArraySchema(key_array, schema, data, indexed);
-            return transformFromConfig(key_array, schema, data, transformConfig);
+            data = processArraySchema(key_array, schema, data, indexed, config);
+            return transformFromConfig(key_array, schema, data, config);
         default:
-            data = processBasicSchema(key_array, schema, data, indexed);
-            return transformFromConfig(key_array, schema, data, transformConfig);
+            data = processBasicSchema(key_array, schema, data, indexed, config);
+            return transformFromConfig(key_array, schema, data, config);
     }
 }
 
@@ -106,7 +106,7 @@ function processBasicSchema(key_array, schema, data, indexed){
     return data;
 }
 
-function processArraySchema(key_array, schema, data, indexed){
+function processArraySchema(key_array, schema, data, indexed, config){
     let itemlist = traverseObject(["items", "$ref"], schema);
     if(itemlist){
         key_array = parseSchemaRef(itemlist);
@@ -117,7 +117,7 @@ function processArraySchema(key_array, schema, data, indexed){
         schema = schema.items;
         isNewSchema = false;
     }
-    let new_data = data.map( (current, index) => { return propertyProcessController(key_array, schema, current, indexed, isNewSchema); });
+    let new_data = data.map( (current, index) => { return propertyProcessController(key_array, schema, current, indexed, isNewSchema, config); });
     return new_data;
 }
 
@@ -125,18 +125,18 @@ function processArraySchema(key_array, schema, data, indexed){
 //  - they can have a key "properties", which means a list of keys, each with it's own corresponding schema 
 //  - they can have a key "additionalProperties", which has an $ref. This means that all the data here actually corresponds with the $ref schema, and so we should pass any current info (Read: indexed keys or naw), to the next schema
 //  - they can have a key "allOf" which has a $ref. This also means that all data here corresponds with the $ref schema, and so we should pass any current info (Read: indexed keys or naw), to the next schema
-function processObjectSchema(key_array, schema, data, indexed){
+function processObjectSchema(key_array, schema, data, indexed, config){
     if(schema.properties)
-        return processKeywordProperties(key_array, schema, data, indexed);
+        return processKeywordProperties(key_array, schema, data, indexed, config);
     else if(schema.additionalProperties)
-        return processKeywordAdditionalProperties(key_array, schema, data, indexed);
+        return processKeywordAdditionalProperties(key_array, schema, data, indexed, config);
     else if(schema.allOf)
-        return processKeywordAllOf(key_array, schema, data, indexed);
+        return processKeywordAllOf(key_array, schema, data, indexed, config);
     else
         throw Error("This object has no properties, God help us all.")
 }
 
-function processKeywordProperties(key_array, schema, data, indexed){
+function processKeywordProperties(key_array, schema, data, indexed, config){
     let parsed_properties = {};
     for(property in data){
         let passKeys = key_array.slice(0);
@@ -180,13 +180,13 @@ function processKeywordProperties(key_array, schema, data, indexed){
                 }
             }
         }
-        parsed_properties[property] = propertyProcessController(passKeys, passSchema, data[property], indexed, isNewSchema);
+        parsed_properties[property] = propertyProcessController(passKeys, passSchema, data[property], indexed, isNewSchema, config);
     }
     return parsed_properties;
 }
 
 
-function processKeywordAdditionalProperties(key_array, schema, data, indexed){
+function processKeywordAdditionalProperties(key_array, schema, data, indexed, config){
     let prop_schema = traverseObject(["additionalProperties", "$ref"], schema);
     if(prop_schema){
         key_array = parseSchemaRef(prop_schema);
@@ -202,13 +202,13 @@ function processKeywordAdditionalProperties(key_array, schema, data, indexed){
     for(property in data){
         // iterate through the list. we don't have to care about the keys being indexed or not
         // because additionalProperties should only ever hold one schema.
-        parsed_properties[property] = propertyProcessController(key_array, schema, data[property], indexed, false); 
+        parsed_properties[property] = propertyProcessController(key_array, schema, data[property], indexed, false, config); 
         // NOTE: isNewSchema false by default, if indexed is true it means all keys in the data being used by the next schema are indexed
     }
     return parsed_properties;
 }
 
-function processKeywordAllOf(key_array, schema, data, indexed){
+function processKeywordAllOf(key_array, schema, data, indexed, config){
     let prop_schema = traverseObject(["allOf", 0, "$ref"], schema);
     if(prop_schema){
         key_array = parseSchemaRef(prop_schema);
@@ -216,7 +216,7 @@ function processKeywordAllOf(key_array, schema, data, indexed){
     }
     else 
         throw Error("First instance of allOf without a $ref, don't currently support this.");
-    return propertyProcessController(key_array, schema, data, indexed, false); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
+    return propertyProcessController(key_array, schema, data, indexed, false, config); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 /*
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/";
@@ -226,4 +226,14 @@ let blah = processAPIEndpoint(api_doc_link, request_type, code, test_data);
 const fs = require('fs');
 fs.writeFile("parsedcharacterdata.json", JSON.stringify(blah), (result) => console.log("success"));
 */
+let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
+let request_type = "get";
+let code = "200";
+const test_data = require("./profileData.json");
+const config_objects = require('./backendTransformations.js');
+let blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
+const fs = require('fs');
+fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
+
+
 module.exports = processAPIEndpoint;
