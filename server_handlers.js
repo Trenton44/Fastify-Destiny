@@ -14,7 +14,7 @@ async function oAuthRequest(request, reply){
     //redirect to bungie AuthO portal.
     let [url, state] = d2helper.AuthORedirectURL();
     request.session.state = state;
-    return reply.redirect(url);
+    return reply.code(303).redirect(url);
 }
 async function oAuthResponse(request, reply){
     if(request.session.state != decodeURIComponent(request.query.state)){
@@ -62,7 +62,7 @@ async function api_profileData(request, reply){
         let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
         let request_type = "get";
         let code = "200";
-        let parsed_data = data_processor(api_doc_link, request_type, code, result.data.Response);
+        let parsed_data = data_processor(api_doc_link, request_type, code, result.data.Response, data_transformer.GetProfile);
         return parsed_data;
     }).catch( (error) => {
         console.log(error);
@@ -84,7 +84,7 @@ async function api_characterData(request, reply){
         let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/";
         let request_type = "get";
         let code = "200";
-        let parsed_data = data_processor(api_doc_link, request_type, code, data);
+        let parsed_data = data_processor(api_doc_link, request_type, code, data, {});
         return parsed_data;
     }).catch( (error) => {
         console.log(error)
