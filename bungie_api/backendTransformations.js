@@ -120,6 +120,9 @@ let GetProfile = {
             "DictionaryComponentResponseOfint64AndDestinyCurrenciesComponent": {
                 "transform": function(data) { return data.data; }
             },
+            "Destiny.Entities.Inventory.DestinyInventoryComponent":{
+                "transform": function(data){ return data.items; }
+            },
             "Destiny.Entities.Characters.DestinyCharacterComponent":{
                 "transform": function(data){
                     let altered_stats = {};
