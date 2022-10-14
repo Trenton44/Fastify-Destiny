@@ -219,13 +219,6 @@ function processKeywordAllOf(key_array, schema, data, indexed, config){
     return propertyProcessController(key_array, schema, data, indexed, false, config); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 /*
-let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/";
-let request_type = "get";
-let code = "200";
-let blah = processAPIEndpoint(api_doc_link, request_type, code, test_data);
-const fs = require('fs');
-fs.writeFile("parsedcharacterdata.json", JSON.stringify(blah), (result) => console.log("success"));
-*/
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
 let request_type = "get";
 let code = "200";
@@ -234,6 +227,8 @@ const config_objects = require('./backendTransformations.js');
 let blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
 const fs = require('fs');
 fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
+*/
+
 
 
 module.exports = processAPIEndpoint;
