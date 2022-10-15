@@ -38,7 +38,7 @@ function parseSchemaRef(ref_link, delimiter){
 
 //This function checks for a few specific x-type-headers inside the schema that may indicate the keys inside of our data may be indexed to a value, rather than matching the schema's property key.
 //  If they are in the schema, the keys may be indexed, which is good to know
-function dataIndexed(key_array, schema, data){
+function dataIndexed(schema){
     let relevant_headers = ["x-dictionary-key", "x-mapped-definition"]; //"x-enum-values"
     let schema_keys = Object.keys(schema);
     for(i in schema_keys){
@@ -74,54 +74,44 @@ function Entrypoint(path, request_type, status_code, data, config){
 //  We need to pass the knowledge of being "indexed" along, so in cases where we aren't using a brand new schema (like processing array types or objects with additionalProperties), we pass "isNewSchema" as false, so "indexed" isn't reset.
 function propertyProcessController(key_array, schema, data, indexed, isNewSchema, config){
     let stack = [];
-    let node = [key_array, schema, data, indexed, isNewSchema];
+    let node = [key_array, schema, data, indexed, isNewSchema, []];
     stack.push(node);
     for(let i = 0; i < stack.length; i++){
-        if(stack[i][1].type != "object" && stack[i][1].type != "array"){ continue; } // it's a basic-type node, it won't have any children to process.
-        stack.splice(i+1, 0, ...processByProperty(stack[i]));
+        //if(stack[i][1].type != "object" && stack[i][1].type != "array"){ continue; } // it's a basic-type node, it won't have any children to process.
+        stack.splice(i+1, 0, ...processByProperty(...stack[i]));
     }
-    while(stack.length != 0){
+    /*while(stack.length != 0){
         stack[stack.length - 1][2] = transformFromConfig(stack[stack.length - 1][0], stack[stack.length - 1][1], stack[stack.length - 1][2], config);
         temp = stack[stack.length - 1];
         stack.pop();
-    }
+    }*/
     return data; // might need to add a transformFromConfig here too.
 }
-function processByProperty(parameters){
-    let key_array = parameters[0];
-    let schema = parameters[1];
-    let data = parameters[2];
-    let indexed = parameters[3];
-    let isNewSchema = parameters[4];
+function processByProperty(key_array, schema, data, indexed, isNewSchema, data_keys){
     if(isNewSchema)
-        parameters[3] = dataIndexed(key_array, schema, data);
+        indexed = dataIndexed(schema);
     switch(schema.type){
         case "object":
-            children = processObjectSchema(parameters);
+            children = processObjectSchema(key_array, schema, data, indexed, data_keys);
             break;
         case "array":
-            children = processArraySchema(parameters);
+            children = processArraySchema(key_array, schema, data, indexed, data_keys);
             break;
         default:
-            children = processBasicSchema(parameters);
+            children = processBasicSchema(key_array, schema, data, indexed, data_keys);
             break;
     }
     return children;
 }
 
 
-function processBasicSchema(parameters){ return parameters; }
+function processBasicSchema(key_array, schema, data, indexed, data_keys){  return [[key_array, schema, data, indexed, data_keys]]; }
 
-function processArraySchema(parameters){
-    let key_array = parameters[0];
-    let schema = parameters[1];
-    let data = parameters[2];
-    let indexed = parameters[3];
-
+function processArraySchema(key_array, schema, data, indexed, data_keys){
     let itemlist = traverseObject(["items", "$ref"], schema);
     if(itemlist){
         key_array = parseSchemaRef(itemlist);
-        schema = traverseObject(key_array, schema);
+        schema = traverseObject(key_array, api_doc);
         isNewSchema = true;
     }
     else{
@@ -129,29 +119,27 @@ function processArraySchema(parameters){
         isNewSchema = false;
     }
     let children = [];
-    for(i in data){ children.push([key_array, schema, data[i], indexed, isNewSchema]); } // data should now be a list of all the children and their parameters
+    for(i in data){ 
+        let newchild = [key_array, schema, data[i], indexed, isNewSchema, data_keys.slice(0)];
+        newchild[5].push(i);
+        children.push(newchild);
+    } // data should now be a list of all the children and their parameters
     //.map creates a new array, which might cause this whole thing to break, since it depends on objects/array passing references
     return children;
 }
-function processObjectSchema(parameters){
-    if(parameters[1].properties)
-        return processKeywordProperties(parameters);
-    else if(parameters[1].additionalProperties)
-        return processKeywordAdditionalProperties(parameters);
-    else if(parameters[1].allOf)
-        return processKeywordAllOf(parameters);
+function processObjectSchema(key_array, schema, data, indexed, data_keys){
+    if(schema.properties)
+        return processKeywordProperties(key_array, schema, data, indexed, data_keys);
+    else if(schema.additionalProperties)
+        return processKeywordAdditionalProperties(key_array, schema, data, indexed, data_keys);
+    else if(schema.allOf)
+        return processKeywordAllOf(key_array, schema, data, indexed, data_keys);
     else
         throw Error("This object has no properties, God help us all.")
 }
 
-function processKeywordProperties(parameters){
-    let key_array = parameters[0];
-    let schema = parameters[1];
-    let data = parameters[2];
-    let indexed = parameters[3];
-
+function processKeywordProperties(key_array, schema, data, indexed, data_keys){
     let children = [];
-
     for(property in data){
         let passKeys = key_array.slice(0);
         let passSchema = schema.properties;
@@ -195,17 +183,14 @@ function processKeywordProperties(parameters){
                 }
             }
         }
-        children.push([passKeys, passSchema, data[property], indexed, isNewSchema]); 
+        let newchild = [passKeys, passSchema, data[property], indexed, isNewSchema, data_keys.slice(0)];
+        newchild[5].push(property);
+        children.push(newchild); 
     }
     return children;
 }
 
-function processKeywordAdditionalProperties(parameters){
-    let key_array = parameters[0];
-    let schema = parameters[1];
-    let data = parameters[2];
-    let indexed = parameters[3];
-
+function processKeywordAdditionalProperties(key_array, schema, data, indexed, data_keys){
     let prop_schema = traverseObject(["additionalProperties", "$ref"], schema);
     if(prop_schema){
         key_array = parseSchemaRef(prop_schema);
@@ -218,17 +203,14 @@ function processKeywordAdditionalProperties(parameters){
 
     let children = [];
     for(property in data){
-        children.push([key_array, schema, data[property], indexed, false]);
+        let newchild = [key_array, schema, data[property], indexed, false, data_keys.slice(0)];
+        newchild[5].push(property);
+        children.push(newchild);
     }
     return children;
 }
 
-function processKeywordAllOf(parameters){
-    let key_array = parameters[0];
-    let schema = parameters[1];
-    let data = parameters[2];
-    let indexed = parameters[3];
-
+function processKeywordAllOf(key_array, schema, data, indexed, data_keys){
     let prop_schema = traverseObject(["allOf", 0, "$ref"], schema);
     if(prop_schema){
         key_array = parseSchemaRef(prop_schema);
@@ -236,7 +218,10 @@ function processKeywordAllOf(parameters){
     }
     else 
         throw Error("First instance of allOf without a $ref, don't currently support this.");
-    return [[key_array, schema, data, indexed, false]]; //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
+        
+    let newchild =[key_array, schema, data, indexed, false, data_keys.slice(0)]
+    newchild[5].push("data");
+    return [newchild]; //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
@@ -244,8 +229,6 @@ let request_type = "get";
 let code = "200";
 const test_data = require("./profileData.json");
 const config_objects = require('./backendTransformations.js');
-console.log("Get Profile: ");
-console.log(config_objects.GetProfile);
 let blah = Entrypoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
 const fs = require('fs');
 fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));

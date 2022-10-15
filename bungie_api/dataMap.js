@@ -18,7 +18,7 @@ function traverseObject(keylist, searchObj){
 //  Ex: if our data is stored at components.schemas.DestinyItemComponent
 //  then in the config object, we would have components.schemas.DestinyItemComponent.transform = function(data) { "code to transform the data" }
 //  
-function transformFromConfig(key_array, schema, data, config){
+function transformFromConfig(key_array, data, config){
     key_array = key_array.slice(0); //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
     key_array.push("transform"); //The keyword the function is stored in. Note: This will be a problem if the data has a proprty "transform" already.
     let reference = traverseObject(key_array, config);
@@ -30,17 +30,15 @@ function transformFromConfig(key_array, schema, data, config){
 //parses the $ref link into an array of keys that can be used to get to the actual schema inside the api doc object.
 //Note: currently all $refs in the api doc obj are local, and have a leading #. if this changes, will need to add logic to accomodate
 function parseSchemaRef(ref_link, delimiter){
-    if(!delimiter) 
-        delimiter = "/";  //local schema ref's use /, so defaulting to it.
+    if(!delimiter) { delimiter = "/"; }  //local schema ref's use /, so defaulting to it.
     let link_array = ref_link.split(delimiter);
-    if(link_array[0] === "#") 
-        return link_array.slice(1); //return without leading # if it exists
+    if(link_array[0] === "#") { return link_array.slice(1); } //return without leading # if it exists
     return link_array;
 }
 
 //This function checks for a few specific x-type-headers inside the schema that may indicate the keys inside of our data may be indexed to a value, rather than matching the schema's property key.
 //  If they are in the schema, the keys may be indexed, which is good to know
-function dataIndexed(key_array, schema, data){
+function dataIndexed(schema){
     let relevant_headers = ["x-dictionary-key", "x-mapped-definition"]; //"x-enum-values"
     let schema_keys = Object.keys(schema);
     for(i in schema_keys){
@@ -51,11 +49,6 @@ function dataIndexed(key_array, schema, data){
     }
     return false;
 }
-
-
-
-
-
 
 
 //  The entrypoint for every endpoint that has data to process.
@@ -87,17 +80,17 @@ function processAPIEndpoint(path, request_type, status_code, endpoint_data, conf
 //  We need to pass the knowledge of being "indexed" along, so in cases where we aren't using a brand new schema (like processing array types or objects with additionalProperties), we pass "isNewSchema" as false, so "indexed" isn't reset.
 function propertyProcessController(key_array, schema, data, indexed, isNewSchema, config){
     if(isNewSchema)
-        indexed = dataIndexed(key_array, schema, data);
+        indexed = dataIndexed(schema);
     switch(schema.type){
         case "object":
             data = processObjectSchema(key_array, schema, data, indexed, config);
-            return transformFromConfig(key_array, schema, data, config);
+            return transformFromConfig(key_array, data, config);
         case "array":
             data = processArraySchema(key_array, schema, data, indexed, config);
-            return transformFromConfig(key_array, schema, data, config);
+            return transformFromConfig(key_array, data, config);
         default:
             data = processBasicSchema(key_array, schema, data, indexed, config);
-            return transformFromConfig(key_array, schema, data, config);
+            return transformFromConfig(key_array, data, config);
     }
 }
 
@@ -141,7 +134,6 @@ function processKeywordProperties(key_array, schema, data, indexed, config){
     for(property in data){
         let passKeys = key_array.slice(0);
         let passSchema = schema.properties;
-        
         let isNewSchema = true;
         if(traverseObject([property, "$ref"], passSchema)){
             //object property has a $ref, set that as the schema and go
@@ -228,7 +220,6 @@ let blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, confi
 const fs = require('fs');
 fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
 */
-
 
 
 module.exports = processAPIEndpoint;
