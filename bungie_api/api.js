@@ -3,6 +3,11 @@ const axios = require('axios');
 const bungie_root = "https://www.bungie.net";
 const api_root = bungie_root+"/Platform";
 
+function InjectParametersIntoAPIURL(url_string, param_obj){
+    for(property in param_obj)
+        url_string = url_string.replace("{"+property+"}", param_obj[property]);
+    return url_string;
+}
 
 // Functions categorized as "User" on the bnet API docs
 
@@ -34,16 +39,12 @@ function GetLinkedProfiles(token, membership_id, membership_type){
     return get(path, token);
 };
 
-function GetProfile(token, destiny_membership_id, components, membership_type){
-    if(!membership_type) membership_type = "-1"; // -1 is the enum value for all membership types. hopefully remove this hardcoding later.
-    let path = api_root + "/Destiny2/"+membership_type+"/Profile/"+destiny_membership_id+"/";
-    let params = new URLSearchParams(components);
-    path = new URL(path);
-    path.search = params;
-
+function GetProfile(openapi_url, params, components, token){
+    let path = new URL(api_root+InjectParametersIntoAPIURL(openapi_url, params));
+    path.search = new URLSearchParams(components);
     return get(path.toString(), token);
+}
 
-};
 function GetCharacter(token, destiny_membership_id, character_id, components, membership_type){
     let path = api_root + "/Destiny2/"+membership_type+"/Profile/"+destiny_membership_id+"/Character/"+character_id+"/";
     path = new URL(path);
@@ -64,7 +65,7 @@ function get(path, token){
         headers: {"X-API-Key":process.env.BUNGIE_API_KEY},
     };
     if(token){ request_object.headers.Authorization = "Bearer "+token; }
-    return axios(request_object)
+    return axios(request_object);
 }
 
 function post(path, body, token){
@@ -75,9 +76,9 @@ function post(path, body, token){
         data: body
     };
     if(token){ request_object.headers.Authorization = "Bearer "+token; }
-    return axios(request_object)
+    return axios(request_object);
 }
 
 
 
-module.exports = {GetDestinyManifest, GetCredentialTypesForTargetAccount, GetCharacter, GetMembershipDataById, GetLinkedProfiles, GetProfile, SearchDestinyPlayerByBungieName};
+module.exports = {get, GetDestinyManifest, GetCredentialTypesForTargetAccount, GetCharacter, GetMembershipDataById, GetLinkedProfiles, GetProfile, SearchDestinyPlayerByBungieName};

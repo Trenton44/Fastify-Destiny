@@ -3,7 +3,7 @@ const d2_definitions = require("./manifest/en/world_content.json");
 
 const bungie_root = "https://www.bungie.net";
 
-let GetProfile = {
+let config = {
     "components": {
         "schemas": {
             "Destiny.Responses.DestinyProfileResponse": {
@@ -15,7 +15,6 @@ let GetProfile = {
                         char_store.equipment_data = data.characterEquipment[ids[i]].items;
                         char_store.inventory_data = data.characterInventories[ids[i]].items;
                         char_store.render_data = data.characterRenderData[ids[i]];
-                        
                     }
 
                     //delete now useless duplicate 
@@ -30,7 +29,11 @@ let GetProfile = {
                         inventory: data.profileInventory.items
                     };
                     return data;
-                    
+                },
+                "profileInventory": {
+                    "transform": function(data){
+                        return data;
+                    }
                 }
             },
             "SingleComponentResponseOfDestinyVendorReceiptsComponent": {
@@ -159,4 +162,4 @@ let GetProfile = {
     }
 }
 
-module.exports = { GetProfile };
+module.exports = config;

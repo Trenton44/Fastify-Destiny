@@ -53,22 +53,23 @@ async function api_characterIds(request, reply){
 }
 
 async function api_profileData(request, reply){
-    let d2_membership_id = request.query.d2_membership_id;
-    let membership_type = request.session.user_data.d2_account.membership_type;
-    let token = request.session.auth_data.access_token;
-    let list = { components: ["100", "102", "103", "200", "201", "203", "205", "300"]};
-    return d2api.GetProfile(token, d2_membership_id, list, membership_type)
-    .then( (result) => {
-        let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
-        let request_type = "get";
-        let code = "200";
-        let parsed_data = data_processor(api_doc_link, request_type, code, result.data.Response, data_transformer.GetProfile);
-        return parsed_data;
-    }).catch( (error) => {
-        console.log(error);
-        return Promise.reject("Nope.");
+    let openapi_url = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
+    let components = { components: ["100", "102", "103", "200", "201", "203", "205", "300"] };
+    let path_params = {
+        membershipType: request.session.user_data.d2_account.membership_type,
+        destinyMembershipId: request.query.d2_membership_id,
+    }
+    return d2api.GetProfile(openapi_url, path_params, components, request.session.auth_data.access_token)
+    .then( (result) => [result.status, result.data])
+    .then( ([status, data]) => {
+        return data_processor(openapi_url, "get", status, data.Response, data_transformer);
+    })
+    .catch( (error) => {
+        console.error(error);
+        return reply.send(500).send({error: "Failed to fetch data." });
     });
 }
+
 async function api_characterData(request, reply){
     request.log.info("User is requesting to access a character's data under this d2 account.");
     let d2_membership_id = request.query.d2_membership_id;

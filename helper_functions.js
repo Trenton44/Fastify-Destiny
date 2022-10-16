@@ -43,15 +43,4 @@ function saveTokenData(session_store, token_data){
     return true;
 }
 
-function AWSTransferSSL(private, public){
-    try{
-        fs.writeFileSync(process.env.HTTPS_KEY_PATH, private);
-        fs.writeFileSync(process.env.HTTPS_CERT_PATH, public);
-    }
-    catch {
-        console.error("UNABLE TO SAVE SSL CERT TO INSTANCE");
-        process.exit(1);
-    }
-    
-}
-module.exports = {validateTokens, saveTokenData};
+module.exports = {validateTokens, saveTokenData, InjectParametersIntoAPIURL};
