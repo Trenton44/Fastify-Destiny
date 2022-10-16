@@ -1,8 +1,5 @@
 const api_doc = require("./openapi.json");
-//const test_data = require("./characterdata.json");
-
-// Helper functions for parsing/interacting with data
-
+const apidoc_xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
 //  Traverses through a given object, one key at a time (using an array of keys), to find a key-value. 
 //      If the key-value doesn't exist, return false
 //      If the key-value is undefined, return false
@@ -11,6 +8,26 @@ function traverseObject(keylist, searchObj){
     catch { return false; }
     if(!searchObj) { return false; } // if the object is found, but is undefined, also return false.
     return searchObj;
+}
+
+//parses the $ref link into an array of keys that can be used to get to the actual schema inside the api doc object.
+//Note: currently all $refs in the api doc obj are local, and have a leading #. if this changes, will need to add logic to accomodate
+function parseSchemaRef(ref_link, delimiter){
+    if(!delimiter) { delimiter = "/"; }  //local schema ref's use /, so defaulting to it.
+    let link_array = ref_link.split(delimiter);
+    if(link_array[0] === "#") { return link_array.slice(1); } //return without leading # if it exists
+    return link_array;
+}
+
+//the "schema" passed is usually just the global api_doc, but there are a few cases where i use an internal schema here.
+function findSchema(key_array, schema){
+    if(!schema)
+        schema = api_doc;
+    let path = traverseObject(key_array, schema);
+    if(!path)
+        throw Error("This API path is invalid or contains invalid keys.");
+    let path_key_array = parseSchemaRef(path);
+    return [path_key_array, traverseObject(path_key_array, api_doc)]; 
 }
 
 //  Takes a config object, and iterates through it using the list of obj keys that our data is stored at.
@@ -27,90 +44,89 @@ function transformFromConfig(key_array, data, config){
     return reference(data); //call the transform function, return transformed data.
 }
 
-//parses the $ref link into an array of keys that can be used to get to the actual schema inside the api doc object.
-//Note: currently all $refs in the api doc obj are local, and have a leading #. if this changes, will need to add logic to accomodate
-function parseSchemaRef(ref_link, delimiter){
-    if(!delimiter) { delimiter = "/"; }  //local schema ref's use /, so defaulting to it.
-    let link_array = ref_link.split(delimiter);
-    if(link_array[0] === "#") { return link_array.slice(1); } //return without leading # if it exists
-    return link_array;
+function customTransformations(key_array, data, xtypeheaders, config){
+    if(xtypeheaders["x-destiny-component-type-dependency"]){
+        // This data is based off a component-type dependency relevant to the API response. 
+        // So, we're going to search the config object for a transform function for this specific dependency
+        // before we go off transforming the entire set of data that's in this schema.
+        let temp = key_array.slice(0); //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
+        temp.push(xtypeheaders["x-destiny-component-type-dependency"]); //the component-type key.
+        data = transformFromConfig(key_array, data, config);
+        return data;
+    }
+    if(xtypeheaders["x-mapped-definition"]){
+        //this data is a hash identifier(s) that maps to a destiny definition
+        //So here, we're gonna find that definition, and return the dataset (if you've got it setup to do that in the config obj)
+    }
+    return transformFromConfig(key_array, data, config);
 }
 
-//This function checks for a few specific x-type-headers inside the schema that may indicate the keys inside of our data may be indexed to a value, rather than matching the schema's property key.
-//  If they are in the schema, the keys may be indexed, which is good to know
-function dataIndexed(schema){
-    let relevant_headers = ["x-dictionary-key", "x-mapped-definition"]; //"x-enum-values"
+function getXTypeHeaders(schema){
     let schema_keys = Object.keys(schema);
-    for(i in schema_keys){
-        for(z in relevant_headers){
-            if(schema_keys[i] == relevant_headers[z])
-                return true;
+    let results = {};
+    for(i in apidoc_xtypeheaders){
+        results[apidoc_xtypeheaders[i]] = false;
+        for(j in schema_keys){
+            if(apidoc_xtypeheaders[i] == schema_keys[j])
+                results[apidoc_xtypeheaders[i]] = schema[schema_keys[j]];
         }
     }
-    return false;
+    return results;
 }
 
-
-//  The entrypoint for every endpoint that has data to process.
-//  Iterate through the open api documentation to get, in order:
-//      -The $ref schema for the endpoint's Response
-//      -The $ref schema for the response's Response object
-//  Then pass that schema and array of keys leading to it in the JSON (api doc is in JSON), and begin processing the data.
-function processAPIEndpoint(path, request_type, status_code, endpoint_data, config){
+function Entrypoint(path, request_type, status_code, data, config){
     let key_array = ["paths", path, request_type, "responses", status_code, "$ref"];
-    let api_path = traverseObject(key_array, api_doc);
-    if(!api_path)
-        throw Error("API Path could not be discovered.");
-    let schema_ref_array = parseSchemaRef(api_path);
-    let schema = traverseObject(schema_ref_array, api_doc);
-
+    let [ref_array, schema] = findSchema(key_array); //return the schema for the response
     key_array = ["content", "application/json", "schema","properties", "Response", "$ref"];
-    let response_ref = traverseObject(key_array, schema);
-    if(!response_ref)
-        throw Error("Couldn't discover response ref");
-    schema_ref_array = parseSchemaRef(response_ref);
-    schema = traverseObject(schema_ref_array, api_doc);
-    return propertyProcessController(schema_ref_array, schema, endpoint_data, false, true, config);
+    [ref_array, schema] = findSchema(key_array, schema); //return the schema for the response's data.
+    return propertyProcessController(ref_array, schema, data, config, true); //Data mapping starts here.
 }
 
-//  This is where every new iteration goes through. The general idea is, JSON Schema Objects are just schemas holding other schemas
-//  So everytime we go a level deeper into the api documentation, we check for the next schema's type, and route to a function based on that.
-//  Furthermore, some of the schemas have an x-type-header that indicates if the corresponding data's keys are indexed.
-//  We need to know that, so "indexed" lets us figure that out. However, some schemas, like most arrays, just hold a reference to the actual data's schema.
-//  We need to pass the knowledge of being "indexed" along, so in cases where we aren't using a brand new schema (like processing array types or objects with additionalProperties), we pass "isNewSchema" as false, so "indexed" isn't reset.
-function propertyProcessController(key_array, schema, data, indexed, isNewSchema, config){
+function propertyProcessController(key_array, schema, data, config, isNewSchema, indexed){
+    //Bungie uses various custom "x-type" headers. They're useful for parsing/transforming data, so we're going to get a headcount for the schema in question here.
+    let xtypeheaders = getXTypeHeaders(schema);
     if(isNewSchema)
-        indexed = dataIndexed(schema);
+        indexed = xtypeheaders["x-dictionary-key"];
     switch(schema.type){
         case "object":
             data = processObjectSchema(key_array, schema, data, indexed, config);
-            return transformFromConfig(key_array, data, config);
+            return customTransformations(key_array, data, xtypeheaders, config);
         case "array":
             data = processArraySchema(key_array, schema, data, indexed, config);
-            return transformFromConfig(key_array, data, config);
+            return customTransformations(key_array, data, xtypeheaders, config);
         default:
             data = processBasicSchema(key_array, schema, data, indexed, config);
-            return transformFromConfig(key_array, data, config);
+            return customTransformations(key_array, data, xtypeheaders, config);
     }
+    
 }
 
 //Not much to do with basic types other than return, but i made it a function in case I ever need to add logic to basic types.
-function processBasicSchema(key_array, schema, data, indexed){
-    return data;
+function processBasicSchema(key_array, schema, data, indexed){ 
+    
+    return data; 
+}
+
+function findSchema(key_array, schema){
+    if(!schema)
+        schema = api_doc;
+    let path = traverseObject(key_array, schema);
+    if(!path)
+        throw Error("This API path is invalid or contains invalid keys.");
+    let path_key_array = parseSchemaRef(path);
+    return [path_key_array, traverseObject(path_key_array, api_doc)]; 
 }
 
 function processArraySchema(key_array, schema, data, indexed, config){
-    let itemlist = traverseObject(["items", "$ref"], schema);
-    if(itemlist){
-        key_array = parseSchemaRef(itemlist);
-        schema = traverseObject(key_array, api_doc);
+    try{
+        [key_array, schema] = findSchema(["items", "$ref"], schema);
         isNewSchema = true;
     }
-    else{
+    catch {
         schema = schema.items;
         isNewSchema = false;
     }
-    let new_data = data.map( (current, index) => { return propertyProcessController(key_array, schema, current, indexed, isNewSchema, config); });
+    let new_data = data.map( (current, index) => { return propertyProcessController(key_array.slice(0), schema, current, config, isNewSchema, indexed); });
     return new_data;
 }
 
@@ -135,12 +151,12 @@ function processKeywordProperties(key_array, schema, data, indexed, config){
         let passKeys = key_array.slice(0);
         let passSchema = schema.properties;
         let isNewSchema = true;
-        if(traverseObject([property, "$ref"], passSchema)){
+        try {
             //object property has a $ref, set that as the schema and go
-            passKeys = parseSchemaRef( traverseObject([property, "$ref"], passSchema) );
-            passSchema = traverseObject(passKeys, api_doc); //Note: api_doc is global reference to openapi.json, bungie api documentation
+            [passKeys, passSchema] = findSchema([property, "$ref"], passSchema);
+
         }
-        else{
+        catch {
             //  If we get here, this particular property is either:
             //  1: One holding it's own schema info instead of a $ref to another
             //  2: An indexed property, so the key won't match up to it's corresponding schema key
@@ -172,53 +188,40 @@ function processKeywordProperties(key_array, schema, data, indexed, config){
                 }
             }
         }
-        parsed_properties[property] = propertyProcessController(passKeys, passSchema, data[property], indexed, isNewSchema, config);
+        parsed_properties[property] = propertyProcessController(passKeys, passSchema, data[property], config, isNewSchema, indexed);
     }
     return parsed_properties;
 }
 
-
 function processKeywordAdditionalProperties(key_array, schema, data, indexed, config){
-    let prop_schema = traverseObject(["additionalProperties", "$ref"], schema);
-    if(prop_schema){
-        key_array = parseSchemaRef(prop_schema);
-        schema = traverseObject(key_array, api_doc);
-    }
-    else{
+    try { [key_array, schema] = findSchema(["additionalProperties", "$ref"], schema); }
+    catch {
         // In the case where there isn't a schema ref, we want to pass along the knowledge of if this data is indexed.
         schema = schema.additionalProperties;
     }
-    
     let parsed_properties = {};
     for(property in data){
         // iterate through the list. we don't have to care about the keys being indexed or not
         // because additionalProperties should only ever hold one schema.
-        parsed_properties[property] = propertyProcessController(key_array, schema, data[property], indexed, false, config); 
+        parsed_properties[property] = propertyProcessController(key_array.slice(0), schema, data[property], config, false, indexed);
         // NOTE: isNewSchema false by default, if indexed is true it means all keys in the data being used by the next schema are indexed
     }
     return parsed_properties;
 }
 
 function processKeywordAllOf(key_array, schema, data, indexed, config){
-    let prop_schema = traverseObject(["allOf", 0, "$ref"], schema);
-    if(prop_schema){
-        key_array = parseSchemaRef(prop_schema);
-        schema = traverseObject(key_array, api_doc);
-    }
-    else 
-        throw Error("First instance of allOf without a $ref, don't currently support this.");
-    return propertyProcessController(key_array, schema, data, indexed, false, config); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
+    try { [key_array, schema] = findSchema(["allOf", 0, "$ref"], schema); }
+    catch { throw Error("First instance of allOf without a $ref, don't currently support this."); }
+    return propertyProcessController(key_array.slice(0), schema, data, config, false, indexed); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 
-console.time("non-promise");
+/*
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
 let request_type = "get";
 let code = "200";
 const test_data = require("./profileData.json");
 const config_objects = require('./backendTransformations.js');
-blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
-console.timeEnd("non-promise");
+blah = Entrypoint(api_doc_link, request_type, code, test_data, config_objects);
 const fs = require('fs');
-fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
-
-module.exports = processAPIEndpoint;
+fs.writeFile("new_parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
+*/
