@@ -166,7 +166,7 @@ function processKeywordProperties(key_array, schema, data, indexed, config){
                 else {
                     //At this point, it's either indexed, and the api doesn't indicate it, or it's an undocumented property of the data.
                     //  Regardless, there's nothing we can do, so just return the data as-is.
-                    console.log("Can't tell if "+property+" is undocumented or indexed.");
+                    //console.log("Can't tell if "+property+" is undocumented or indexed.");
                     parsed_properties[property] = data[property];
                     continue;
                 }
@@ -187,7 +187,6 @@ function processKeywordAdditionalProperties(key_array, schema, data, indexed, co
     else{
         // In the case where there isn't a schema ref, we want to pass along the knowledge of if this data is indexed.
         schema = schema.additionalProperties;
-        
     }
     
     let parsed_properties = {};
@@ -211,15 +210,15 @@ function processKeywordAllOf(key_array, schema, data, indexed, config){
     return propertyProcessController(key_array, schema, data, indexed, false, config); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 /*
+console.time("non-promise");
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
 let request_type = "get";
 let code = "200";
 const test_data = require("./profileData.json");
 const config_objects = require('./backendTransformations.js');
-let blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
+blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, config_objects.GetProfile);
+console.timeEnd("non-promise");
 const fs = require('fs');
 fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
 */
-
-
 module.exports = processAPIEndpoint;
