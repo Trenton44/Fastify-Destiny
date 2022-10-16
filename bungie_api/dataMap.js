@@ -103,7 +103,7 @@ function processArraySchema(key_array, schema, data, indexed, config){
     let itemlist = traverseObject(["items", "$ref"], schema);
     if(itemlist){
         key_array = parseSchemaRef(itemlist);
-        schema = traverseObject(key_array, schema);
+        schema = traverseObject(key_array, api_doc);
         isNewSchema = true;
     }
     else{
@@ -209,7 +209,7 @@ function processKeywordAllOf(key_array, schema, data, indexed, config){
         throw Error("First instance of allOf without a $ref, don't currently support this.");
     return propertyProcessController(key_array, schema, data, indexed, false, config); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
-/*
+
 console.time("non-promise");
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
 let request_type = "get";
@@ -220,5 +220,5 @@ blah = processAPIEndpoint(api_doc_link, request_type, code, test_data, config_ob
 console.timeEnd("non-promise");
 const fs = require('fs');
 fs.writeFile("parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
-*/
+
 module.exports = processAPIEndpoint;
