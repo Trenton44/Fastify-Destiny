@@ -72,6 +72,30 @@ function transformFromConfig(key_array, data, config){
     return reference(data); //call the transform function, return transformed data.
 }
 
+function getXMappedDefinition(key_array, data, xmapped_schema_ref){
+    if(!xmapped_schema_ref)
+        return [false, data];
+    //this data is a hash identifier(s) that maps to a destiny definition
+    //So here, we're gonna find that definition, and return the dataset (if you've got it setup to do that in the config obj)
+    
+    temp_key_array = parseSchemaRef(xmapped_schema_ref["$ref"]);
+
+    // at this point, the key_array should look something like this: ['components', 'schemas', 'Destiny.Definitions.DestinyInventoryItemDefinition']
+    // that last piece contains the location of the definition this value maps to in the manifest files
+    // So, we're going to parse that piece into a key array, and use it to retrieve the value from the manifest.
+    // then we will replace this hash identifier with that processed data.
+    let temp = parseSchemaRef(temp_key_array[temp_key_array.length -1], ".");
+    temp = temp.slice(temp.length - 1);
+    temp.push(data); // add the hash to the list of keys, so we can find it in Definitions
+    return [
+        temp_key_array,
+        {
+            id: data,
+            data: traverseObject(temp, Definitions)
+        }
+    ];
+}
+
 function customTransformations(key_array, data, xtypeheaders, config){
     if(xtypeheaders["x-destiny-component-type-dependency"]){
         // This data is based off a component-type dependency relevant to the API response. 
@@ -96,27 +120,6 @@ function customTransformations(key_array, data, xtypeheaders, config){
             return transformFromConfig(temp, data, config);
         
     }
-    /*if(xtypeheaders["x-mapped-definition"]){
-        //this data is a hash identifier(s) that maps to a destiny definition
-        //So here, we're gonna find that definition, and return the dataset (if you've got it setup to do that in the config obj)
-        
-        let temp_key_array = parseSchemaRef(xtypeheaders["x-mapped-definition"]["$ref"]);
-        let xmappedschema = traverseObject(temp_key_array, api_doc);
-        if(xmappedschema){
-            //console.log("We've successfully found the schema definition");
-            // at this point, the temp_key_array should look something like this: ['components', 'schemas', 'Destiny.Definitions.DestinyInventoryItemDefinition']
-            // that last piece contains the location of the definition this value maps to in the manifest files
-            // So, we're going to parse that piece into a key array, and use it to retrieve the value from the manifest.
-            // then we will replace this hash identifier with that processed data.
-            let def_key_array = parseSchemaRef(temp_key_array[temp_key_array.length -1], ".");
-            def_key_array = def_key_array.slice(def_key_array.length - 1);
-            def_key_array.push(data);
-            let manifest_data = traverseObject(def_key_array, Definitions);
-            //if for some reason it can't find it in the manifest database, just proceed with the data as normal.
-            if(manifest_data)
-                return propertyProcessController(temp_key_array, xmappedschema, manifest_data, config, true, false);
-        }
-    }*/
     if(xtypeheaders["x-enum-reference"]){
         //enum reference means it's got a integer representing some other value.
         //that value is found in the schema under an x-enum-value array of objects
@@ -160,25 +163,43 @@ function Entrypoint(path, request_type, status_code, data, config){
 }
 
 async function propertyProcessController(key_array, schema, data, config, isNewSchema, indexed){
-    //console.log("Data Before: "+Object.keys(data) + " Value: "+data+" "+schema.type);
     //Bungie uses various custom "x-type" headers. They're useful for parsing/transforming data, so we're going to get a headcount for the schema in question here.
     let xtypeheaders = getXTypeHeaders(schema, key_array);
     if(isNewSchema)
         indexed = xtypeheaders["x-dictionary-key"];
     switch(schema.type){
         case "object":
-            return processObjectSchema(key_array, schema, data, indexed, config)
-            .then( (data) => { return customTransformations(key_array, data, xtypeheaders, config); });
+            processed_data = processObjectSchema(key_array, schema, data, indexed, config)
+            .then( (data) => { 
+                let results = customTransformations(key_array, data, xtypeheaders, config);
+                return results;
+            });
+            break;
         case "array":
-            return processArraySchema(key_array, schema, data, indexed, config)
+            processed_data = processArraySchema(key_array, schema, data, indexed, config)
             .then( (data) => {
-                let test = data.map( (current) => { return customTransformations(key_array, current, xtypeheaders, config); });
+                let test = data.map( (current) => { 
+                    let results = customTransformations(key_array, current, xtypeheaders, config);
+                    return results;
+                });
                 return test;
-            }, this);
+            });
+            break;
         default:
-            return processBasicSchema(key_array, schema, data, indexed, config)
-            .then( (data) => { return customTransformations(key_array, data, xtypeheaders, config); });
+            processed_data = processBasicSchema(key_array, schema, data, indexed, config)
+            .then( (data) => { 
+                let [xmapkeys, results] = getXMappedDefinition(key_array, data, xtypeheaders["x-mapped-definition"]);
+                if(xmapkeys){
+                    results.id = customTransformations(key_array, results.id, xtypeheaders, config);
+                    results.data = customTransformations(xmapkeys, results.data, xtypeheaders, config);
+                }
+                else
+                    results = customTransformations(key_array, data, xtypeheaders, config)
+                return results;
+            });
+            break;
     }
+    return processed_data;
 }
 
 //Not much to do with basic types other than return, but i made it a function in case I ever need to add logic to basic types.
@@ -217,7 +238,7 @@ function processObjectSchema(key_array, schema, data, indexed, config){
     else if(schema.allOf)
         return processKeywordAllOf(key_array, schema, data, indexed, config);
     else
-        throw Error("This object has no properties, God help us all.")
+        throw Error("This object has no properties, God help us all.");
 }
 
 function processKeywordProperties(key_array, schema, data, indexed, config){
@@ -230,7 +251,6 @@ function processKeywordProperties(key_array, schema, data, indexed, config){
         try {
             //object property has a $ref, set that as the schema and go
             [passKeys, passSchema] = findSchema([property, "$ref"], passSchema);
-
         }
         catch {
             //  If we get here, this particular property is either:
@@ -291,9 +311,9 @@ function processKeywordAdditionalProperties(key_array, schema, data, indexed, co
 }
 
 function processKeywordAllOf(key_array, schema, data, indexed, config){
-    try { [passKeys, schema] = findSchema(["allOf", 0, "$ref"], schema); }
+    try { [key_array, schema] = findSchema(["allOf", 0, "$ref"], schema); }
     catch { throw Error("First instance of allOf without a $ref, don't currently support this."); }
-    return propertyProcessController(passKeys.slice(0), schema, data, config, false, indexed); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
+    return propertyProcessController(key_array.slice(0), schema, data, config, false, indexed); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 
 
