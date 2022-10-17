@@ -1,8 +1,7 @@
 const fs = require("fs");
 const https = require('https')
-const { exec, execSync } = require("child_process");
+const { execSync } = require("child_process");
 var manifest = require("./manifest.json");
-const { Console } = require("console");
 var bungie = "https://www.bungie.net";
 var bungiepath = "https://www.bungie.net";
 

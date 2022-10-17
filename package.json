@@ -13,12 +13,13 @@
   },
   "scripts": {
     "start": "node server.js",
-    "build": "",
     "devstart": "nodemon server.js",
     "predeploy": "node bungie_api/manifest.js",
-    "deploy": "node server.js"
+    "deploy": "node server.js",
+    "generate-docs": "jsdoc -r ./"
   },
   "devDependencies": {
+    "jsdoc": "^3.6.11",
     "nodemon": "^2.0.20",
     "pino-pretty": "^9.1.0"
   }
