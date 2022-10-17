@@ -95,52 +95,64 @@ function getXMappedDefinition(key_array, data, xmapped_schema_ref){
         }
     ];
 }
+function ProcessXComponentType(key_array, data, xtypeheader, config){
+    // This data is based off a component-type dependency relevant to the API response. 
+    // So, we're going to search the config object for a transform function for this specific component-type-dependency
 
+    //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
+
+    //We want the key found in the x-type-header, 
+    //so we replace the current keys pointing to the schema and replace them with keys pointing to the component-type-dependency schema.
+    // in the api, component-type-dependency schemas are on the same json-object level as everything else.
+    //Ex of this in action:
+    //[components, schemas, Destiny.Responses.DestinyProfileResponse, profileInventory] is a destiny-component-type-dependency
+    // So, we will replace the key_array to look for [components, schemas, ProfileInventories], where the dependency schema is located
+    let temp = key_array.slice(0, key_array.length-2); 
+    temp.push(xtypeheader); //the component-type key.
+
+    //there may be a scenario where you don't want to use ProfileInventories, but do want to use [components, schemas, Destiny.Responses.DestinyProfileResponse, profileInventory]
+    //if that's so, simply include a [Destiny.Responses.DestinyProfileResponse, profileInventory] transformation instead
+    //traverseObject will check for a ProfileInventories schema, return false because you didn't add one
+    // and then continue on through this function, and apply the transformation using the normal key_array (Destiny.Responses.DestinyProfileResponse, profileInventory)
+    if(traverseObject(temp, config))
+        return transformFromConfig(temp, data, config);
+    else
+        return false;
+}
+
+function ProcessXEnumReference(data, xtypeheader){
+    //enum reference means it's got a integer representing some other value.
+    //that value is found in the schema under an x-enum-value array of objects
+    //So we go to that schema, find the object with this numericValue, and return it's corresponding identifier
+    //console.log("Found an enum reference.");
+    let temp_key_array = parseSchemaRef(xtypeheader);
+    let xmappedschema = traverseObject(temp_key_array, api_doc);
+    if(xmappedschema){
+        for(i in xmappedschema["x-enum-values"]){
+            if(xmappedschema["x-enum-values"][i].numericValue == data){
+                return xmappedschema["x-enum-values"][i].identifier;
+            }
+                
+        }
+    }
+    return false; //return false if for whatever reason we couldn't find it.
+}
 function customTransformations(key_array, data, xtypeheaders, config){
     if(xtypeheaders["x-destiny-component-type-dependency"]){
-        // This data is based off a component-type dependency relevant to the API response. 
-        // So, we're going to search the config object for a transform function for this specific component-type-dependency
-
-        //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
-
-        //We want the key found in the x-type-header, 
-        //so we replace the current keys pointing to the schema and replace them with keys pointing to the component-type-dependency schema.
-        // in the api, component-type-dependency schemas are on the same json-object level as everything else.
-        //Ex of this in action:
-        //[components, schemas, Destiny.Responses.DestinyProfileResponse, profileInventory] is a destiny-component-type-dependency
-        // So, we will replace the key_array to look for [components, schemas, ProfileInventories], where the dependency schema is located
-        let temp = key_array.slice(0, key_array.length-2); 
-        temp.push(xtypeheaders["x-destiny-component-type-dependency"]); //the component-type key.
-
-        //there may be a scenario where you don't want to use ProfileInventories, but do want to use [components, schemas, Destiny.Responses.DestinyProfileResponse, profileInventory]
-        //if that's so, simply include a [Destiny.Responses.DestinyProfileResponse, profileInventory] transformation instead
-        //traverseObject will check for a ProfileInventories schema, return false because you didn't add one
-        // and then continue on through this function, and apply the transformation using the normal key_array (Destiny.Responses.DestinyProfileResponse, profileInventory)
-        if(traverseObject(temp, config))
-            return transformFromConfig(temp, data, config);
-        
+        let result = ProcessXComponentType(key_array, data, xtypeheaders["x-destiny-component-type-dependency"], config);
+        if(result)
+            return result;
     }
     if(xtypeheaders["x-enum-reference"]){
-        //enum reference means it's got a integer representing some other value.
-        //that value is found in the schema under an x-enum-value array of objects
-        //So we go to that schema, find the object with this numericValue, and return it's corresponding identifier
-        //console.log("Found an enum reference.");
-        let temp_key_array = parseSchemaRef(xtypeheaders["x-enum-reference"]["$ref"]);
-        let xmappedschema = traverseObject(temp_key_array, api_doc);
-        if(xmappedschema){
-            for(i in xmappedschema["x-enum-values"]){
-                if(xmappedschema["x-enum-values"][i].numericValue == data){
-                    return xmappedschema["x-enum-values"][i].identifier;
-                }
-                    
-            }
-        }
-
+        let result = ProcessXEnumReference(data, xtypeheaders["x-enum-reference"]["$ref"]);
+        if(result)
+            return result;
     }
+    //if there aren't any x-type headers, or if there was one and the data failed to process (above functions returned false), just process as a normal, non x-type set of data.
     return transformFromConfig(key_array, data, config);
 }
 
-function getXTypeHeaders(schema, key_array){
+function getXTypeHeaders(schema){
     let schema_keys = Object.keys(schema);
     let results = {};
     for(i in apidoc_xtypeheaders){
@@ -164,7 +176,7 @@ function Entrypoint(path, request_type, status_code, data, config){
 
 async function propertyProcessController(key_array, schema, data, config, isNewSchema, indexed){
     //Bungie uses various custom "x-type" headers. They're useful for parsing/transforming data, so we're going to get a headcount for the schema in question here.
-    let xtypeheaders = getXTypeHeaders(schema, key_array);
+    let xtypeheaders = getXTypeHeaders(schema);
     if(isNewSchema)
         indexed = xtypeheaders["x-dictionary-key"];
     switch(schema.type){
