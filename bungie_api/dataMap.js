@@ -1,10 +1,11 @@
 const api_doc = require("./openapi.json");
 const apidoc_xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
+const Definitions = require("./manifest/en/world_content.json"); 
 //  Traverses through a given object, one key at a time (using an array of keys), to find a key-value. 
 //      If the key-value doesn't exist, return false
 //      If the key-value is undefined, return false
 function traverseObject(keylist, searchObj){
-    try{ keylist.forEach( (key) => {  searchObj = searchObj[key];  }); }
+    try{ keylist.forEach( (key) => {  searchObj = searchObj[key]; });  }
     catch { return false; }
     if(!searchObj) { return false; } // if the object is found, but is undefined, also return false.
     return searchObj;
@@ -47,16 +48,65 @@ function transformFromConfig(key_array, data, config){
 function customTransformations(key_array, data, xtypeheaders, config){
     if(xtypeheaders["x-destiny-component-type-dependency"]){
         // This data is based off a component-type dependency relevant to the API response. 
-        // So, we're going to search the config object for a transform function for this specific dependency
-        // before we go off transforming the entire set of data that's in this schema.
-        let temp = key_array.slice(0); //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
+        // So, we're going to search the config object for a transform function for this specific component-type-dependency
+
+        //to make sure it doesn't affected the original keylist. I don't think it will, but can never be sure.
+
+        //We want the key found in the x-type-header, 
+        //so we replace the current keys pointing to the schema and replace them with keys pointing to the component-type-dependency schema.
+        // in the api, component-type-dependency schemas are on the same json-object level as everything else.
+        //Ex of this in action:
+        //[components, schemas, Destiny.Responses.DestinyProfileResponse, profileInventory] is a destiny-component-type-dependency
+        // So, we will replace the key_array to look for [components, schemas, ProfileInventories], where the dependency schema is located
+        let temp = key_array.slice(0, key_array.length-2); 
         temp.push(xtypeheaders["x-destiny-component-type-dependency"]); //the component-type key.
-        data = transformFromConfig(key_array, data, config);
-        return data;
+
+        //there may be a scenario where you don't want to use ProfileInventories, but do want to use [components, schemas, Destiny.Responses.DestinyProfileResponse, profileInventory]
+        //if that's so, simply include a [Destiny.Responses.DestinyProfileResponse, profileInventory] transformation instead
+        //traverseObject will check for a ProfileInventories schema, return false because you didn't add one
+        // and then continue on through this function, and apply the transformation using the normal key_array (Destiny.Responses.DestinyProfileResponse, profileInventory)
+        if(traverseObject(temp, config))
+            return transformFromConfig(temp, data, config);
+        
     }
-    if(xtypeheaders["x-mapped-definition"]){
+    /*if(xtypeheaders["x-mapped-definition"]){
         //this data is a hash identifier(s) that maps to a destiny definition
         //So here, we're gonna find that definition, and return the dataset (if you've got it setup to do that in the config obj)
+        
+        let temp_key_array = parseSchemaRef(xtypeheaders["x-mapped-definition"]["$ref"]);
+        let xmappedschema = traverseObject(temp_key_array, api_doc);
+        if(xmappedschema){
+            //console.log("We've successfully found the schema definition");
+            // at this point, the temp_key_array should look something like this: ['components', 'schemas', 'Destiny.Definitions.DestinyInventoryItemDefinition']
+            // that last piece contains the location of the definition this value maps to in the manifest files
+            // So, we're going to parse that piece into a key array, and use it to retrieve the value from the manifest.
+            // then we will replace this hash identifier with that processed data.
+            let def_key_array = parseSchemaRef(temp_key_array[temp_key_array.length -1], ".");
+            def_key_array = def_key_array.slice(def_key_array.length - 1);
+            def_key_array.push(data);
+            let manifest_data = traverseObject(def_key_array, Definitions);
+            //if for some reason it can't find it in the manifest database, just proceed with the data as normal.
+            if(manifest_data)
+                return propertyProcessController(temp_key_array, xmappedschema, manifest_data, config, true, false);
+        }
+    }*/
+    if(xtypeheaders["x-enum-reference"]){
+        //enum reference means it's got a integer representing some other value.
+        //that value is found in the schema under an x-enum-value array of objects
+        //So we go to that schema, find the object with this numericValue, and return it's corresponding identifier
+        //console.log("Found an enum reference.");
+        let temp_key_array = parseSchemaRef(xtypeheaders["x-enum-reference"]["$ref"]);
+        let xmappedschema = traverseObject(temp_key_array, api_doc);
+        if(xmappedschema){
+            for(i in xmappedschema["x-enum-values"]){
+                if(xmappedschema["x-enum-values"][i].numericValue == data){
+                    //console.log(xmappedschema["x-enum-values"][i].identifier);
+                    return xmappedschema["x-enum-values"][i].identifier;
+                }
+                    
+            }
+        }
+
     }
     return transformFromConfig(key_array, data, config);
 }
@@ -103,18 +153,7 @@ function propertyProcessController(key_array, schema, data, config, isNewSchema,
 
 //Not much to do with basic types other than return, but i made it a function in case I ever need to add logic to basic types.
 function processBasicSchema(key_array, schema, data, indexed){ 
-    
     return data; 
-}
-
-function findSchema(key_array, schema){
-    if(!schema)
-        schema = api_doc;
-    let path = traverseObject(key_array, schema);
-    if(!path)
-        throw Error("This API path is invalid or contains invalid keys.");
-    let path_key_array = parseSchemaRef(path);
-    return [path_key_array, traverseObject(path_key_array, api_doc)]; 
 }
 
 function processArraySchema(key_array, schema, data, indexed, config){
@@ -215,7 +254,7 @@ function processKeywordAllOf(key_array, schema, data, indexed, config){
     return propertyProcessController(key_array.slice(0), schema, data, config, false, indexed); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 
-/*
+
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
 let request_type = "get";
 let code = "200";
@@ -224,4 +263,5 @@ const config_objects = require('./backendTransformations.js');
 blah = Entrypoint(api_doc_link, request_type, code, test_data, config_objects);
 const fs = require('fs');
 fs.writeFile("new_parsedProfileData.json", JSON.stringify(blah), (result) => console.log("success"));
-*/
+
+module.exports = Entrypoint;
