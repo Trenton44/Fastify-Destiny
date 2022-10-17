@@ -66,7 +66,7 @@ async function api_profileData(request, reply){
     })
     .catch( (error) => {
         console.error(error);
-        return reply.send(500).send({error: "Failed to fetch data." });
+        return {error: "Failed to fetch data." }
     });
 }
 

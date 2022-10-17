@@ -43,4 +43,4 @@ function saveTokenData(session_store, token_data){
     return true;
 }
 
-module.exports = {validateTokens, saveTokenData, InjectParametersIntoAPIURL};
+module.exports = {validateTokens, saveTokenData};
