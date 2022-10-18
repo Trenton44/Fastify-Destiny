@@ -6,7 +6,7 @@ const path = require ('path');
 const helper = require(path.join(__dirname, 'helper_functions.js'));
 const d2helper = require(path.join(__dirname, './bungie_api/wrapper.js'));
 const d2api = require(path.join(__dirname, './bungie_api/api.js'));
-const data_processor = require(path.join(__dirname, './bungie_api/dataMap.js'));
+const data_processor = require(path.join(__dirname, './bungie_api/dataMapPromises.js'));
 const data_transformer = require("./bungie_api/backendTransformations.js");
 
 //FOLLOWING ENDPOINTS DO NOT REQUIRE AUTHORIZATION TO ACCESS

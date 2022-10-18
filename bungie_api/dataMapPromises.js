@@ -19,9 +19,6 @@ function PromiseArrayToObj(keys, array){
     .then( (data) => {
         let object = {};
         data.map( (current, index) => { 
-            //console.log("keys: "+keys[index].toString());
-            //console.log("data: ");
-            //console.log(current.value);
             object[keys[index]] = current.value; 
         });
         return object;
@@ -215,8 +212,7 @@ async function propertyProcessController(key_array, schema, data, config, isNewS
 }
 
 //Not much to do with basic types other than return, but i made it a function in case I ever need to add logic to basic types.
-function processBasicSchema(key_array, schema, data, indexed){ 
-    return Promise.resolve(data); }
+function processBasicSchema(key_array, schema, data, indexed){ return Promise.resolve(data); }
 
 function processArraySchema(key_array, schema, data, indexed, config){
     if(data.length == 0)
@@ -328,7 +324,7 @@ function processKeywordAllOf(key_array, schema, data, indexed, config){
     return propertyProcessController(key_array.slice(0), schema, data, config, false, indexed); //we pass false to isNewSchema by default, as allOf should only ever reference another schema.
 }
 
-
+/*
 let api_doc_link = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
 let request_type = "get";
 let code = "200";
@@ -338,4 +334,6 @@ Entrypoint(api_doc_link, request_type, code, test_data, config_objects)
 .then( (result) => {
     const fs = require('fs');
     fs.writeFile("promiseparsedProfileData.json", JSON.stringify(result), (result) => console.log("success"));
-});
+});*/
+
+module.exports = Entrypoint;
