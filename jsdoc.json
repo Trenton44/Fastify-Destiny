@@ -1,0 +1,36 @@
+{
+    "source": {
+        "includePattern": ".+\\.js(doc|x)?$",
+        "include": ["."],
+        "exclude": ["node_modules", "bungie-api/manifest/", "bungie-api/openapi.json", "bungie-api/manifest.json", "env-files", "docs", "jsdoc.json"]        
+    },
+    "recurseDepth": 10,
+    "opts": {
+        "template": "node_modules/docdash",
+        "destination": "./docs/",
+        "recurse": true,
+        "verbose": true
+    },
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    },
+    "docdash": {
+        "static": false,
+        "menu": {
+            "My GitHub": {
+                "href": "https://github.com/Trenton44/Fastify-Destiny",
+                "target": "_blank",
+                "class": "menu-item",
+                "id": "website_link"
+            },
+            "Bungie API Docs": {
+                "href": "https://bungie-net.github.io/multi/index.html",
+                "target": "_blank",
+                "class": "menu-item",
+                "id": "website_link"
+            }
+
+        }
+    }
+}

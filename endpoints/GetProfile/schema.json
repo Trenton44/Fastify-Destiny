@@ -1,2 +1,26 @@
 {
+    "$id": "GetProfile.schema.json",
+    "title": "GetProfile Input Schema",
+    "type": "object",
+    "querystring": {
+        "type": "object",
+        "required": ["components"],
+        "properties":{
+            "components": { 
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "type": "string" }
+            },
+            "sortBy": { "type": "string" }
+        }
+    },
+    "response": {
+        "200": {
+            "content": {
+                "application/json": {
+                    "type": "object"
+                }
+            }
+        }
+    }
 }

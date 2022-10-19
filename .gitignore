@@ -7,3 +7,4 @@ bungie-api/manifest/
 dockertoAWS.sh
 /old
 /env-files
+/docs

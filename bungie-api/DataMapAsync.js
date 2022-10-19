@@ -1,8 +1,7 @@
 const api_doc = require("./openapi.json");
 const apidoc_xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
 const Definitions = require("./manifest/en/world_content.json"); 
-
-
+ 
 
 //  Traverses through a given object, one key at a time (using an array of keys), to find a key-value. 
 //      If the key-value doesn't exist, return false

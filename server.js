@@ -2,7 +2,7 @@
 const fs = require("fs");
 require("dotenv").config({ path: ".env" });
 
-//External libraries
+
 const fastify = require("fastify");
 const fastifySession = require("@fastify/session");
 const fastifyCookie = require("@fastify/cookie");
@@ -10,7 +10,7 @@ const mongo_store = require("connect-mongo");
 const express_session = require("express-session"); //connect-mongo requires this to be installed, but it is unused
 const cors = require("@fastify/cors");
 //External functions
-const endpoints = require("./endpoints/endpoints.js");
+const endpoints = require("./endpoints/endpoints.js"); // ...  @module
 
 if(process.env.NODE_ENV == "production"){
     let vars = JSON.parse(process.env.API_KEYS);

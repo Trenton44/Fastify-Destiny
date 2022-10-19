@@ -1,5 +1,6 @@
 const path = require ('path');
-const d2 = require(path.join(__dirname, "..", "..", "/bungie-api/wrapper.js"));
+const d2api = require(path.join(__dirname, "..", "..", "/bungie-api/api.js"))
+const config = require("./config.js");
 
 function saveTokenData(session_store, token_data){
     session_store.auth_data = {
@@ -19,31 +20,38 @@ function saveTokenData(session_store, token_data){
 
 async function validateSession(sessionstore){
     if(!sessionstore.auth_data){
-        //console.log("No auth data, checking for query code.");
+        console.log(sessionstore.query_code);
         if(!sessionstore.query_code)
             return Promise.reject({ error: "you have not given authorization to this API yet." });
-        await d2.requestAccessToken(sessionstore.query_code)
+        await d2api.requestAccessToken(sessionstore.query_code)
         .then( (result) => saveTokenData(sessionstore, result.data))
-        .catch( (error) => d2.bungieErrorResponse(error, "unable to process query code."));
+        .catch( (error) => d2api.bungieErrorResponse(error, "unable to process query code."));
     }
-    //console.log("Session_data: "+sessionstore.auth_data);
     let access_expire = sessionstore.auth_data.access_expiration;
     let refresh_expire = sessionstore.auth_data.refresh_exipration;
     if(Date.now() > access_expire){
         if(Date.now() > refresh_expire)
             return Promise.reject({error: "Refresh token expired, user will need to re-authenticate"});
-        await d2.requestRefreshToken()
+        await d2api.requestRefreshToken()
         .then( (result) => saveTokenData(sessionstore, result.data))
-        .catch( (error) => d2.bungieErrorResponse(error, "Refresh token expired, user will need to re-authenticate"));
+        .catch( (error) => d2api.bungieErrorResponse(error, "Refresh token expired, user will need to re-authenticate"));
     }
     if(!sessionstore.d2_account){
         //console.log("no data found, but we know membership_id exists, so we will pull d2 data from bungie.")
-        await d2.getD2MembershipData(sessionstore.auth_data.access_token, sessionstore.user_data.membership_id)
-        .then( (result) => { sessionstore.user_data.d2_account = result; return true; })
-        .catch( (error) => d2.bungieErrorResponse(error, "well, something went wrong obtaining d2_membership_id, so you need to re-authenticate."));
+        // create a config object for this d2 request inside this folder (/AuthO), make a request with the openapischemaurl, the config object, and necessary paraemters to get back the info.
+        await d2api.GetMembershipDataById(sessionstore.auth_data.access_token, sessionstore.user_data.membership_id, "-1", config.GetMembershipData)
+        .then( (result) => {
+            sessionstore.user_data.d2_account = result;
+            if(result.primaryMembershipId)
+                sessionstore.user_data.active_account_id = result.primaryMembershipId; //if primary membership id is valid, set it as the active account for the frontend.
+            else
+                sessionstore.user_data.active_account_id = sessionstore.user_data.destinyMemberships[0].membershipId; //otherwise, look through the array of accounts for one that fits, and make it the active for the frontend. frontend will be responsible for allowing change of this later.
+            return true;
+        })
+        .catch( (error) => d2api.bungieErrorResponse(error, "well, something went wrong obtaining d2_membership_id, so you need to re-authenticate."));
 
     }
-    return Promise.resolve(sessionstore.user_data.membership_id);
+    return Promise.resolve(sessionstore.user_data.active_account_id);
 }
 
 module.exports = validateSession;

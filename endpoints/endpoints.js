@@ -1,4 +1,7 @@
 
+/**
+ * @module Endpoints 
+*/
 const authOsession = require("./AuthO/validate.js");
 const Login = require("./AuthO/endpoint.js");
 const Root = require("./Root/endpoint.js");
@@ -7,6 +10,7 @@ const GetCharacter = require("./GetCharacter/endpoint.js");
 const GetItem = require("./GetItem/endpoint.js");
 
 //all /api endpoints that do not require authorization with bungie.
+
 let api_noauth = (fastify, options, next) => {
     //nothing necessary in the prehandler atm, but I'm keeping it for consistency with authorized endpoints
     fastify.addHook('preHandler', async function(request, reply){ return true; });
