@@ -1,7 +1,9 @@
 /dev_assets
 /deprecated
 /node_modules
-bungie_api/manifest/
+bungie-api/manifest/
 .env
 *.pem
 dockertoAWS.sh
+/old
+/env-files

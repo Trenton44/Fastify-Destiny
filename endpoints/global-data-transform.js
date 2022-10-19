@@ -1,8 +1,3 @@
-// each variable in this file is set to the desired response format of a given endpoint.
-
-
-const bungie_root = "https://www.bungie.net";
-
 let config = {
     "components": {
         "schemas": {
@@ -101,26 +96,6 @@ let config = {
             },
             "Destiny.Entities.Characters.DestinyCharacterComponent":{
                 "transform": function(data){
-                    /*
-                    let altered_stats = {};
-                    for(i in data.stats){
-                        let stat_def = d2_definitions.DestinyStatDefinition[i];
-                        altered_stats[stat_def.displayProperties.name] = data.stats[i];
-                    }
-                    data.emblem_element = {
-                        path: bungie_root+data.emblemPath,
-                        background_path: bungie_root+data.emblemBackgroundPath,
-                        hash: data.emblemHash, //Note, this maps to DestinyInventoryItemDefinition, will need to come back to this later.
-                        colors: data.emblemColor,
-                        race_data: d2_definitions.DestinyRaceDefinition[data.raceHash],
-                        gender_data: d2_definitions.DestinyGenderDefinition[data.genderHash],
-                        class_data: d2_definitions.DestinyClassDefinition[data.classHash],
-                        light: data.light
-                    };
-                    if(data.titleRecordHash){
-                        data.title_data = d2_definitions.DestinyRecordDefinition[data.titleRecordHash];
-                    }
-                    */
                     return data;
                 }
             },

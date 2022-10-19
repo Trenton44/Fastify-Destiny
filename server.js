@@ -1,8 +1,6 @@
 //Built-in libraries
 const fs = require("fs");
-const path = require("path");
 require("dotenv").config({ path: ".env" });
-const crypto = require("crypto");
 
 //External libraries
 const fastify = require("fastify");
@@ -12,7 +10,7 @@ const mongo_store = require("connect-mongo");
 const express_session = require("express-session"); //connect-mongo requires this to be installed, but it is unused
 const cors = require("@fastify/cors");
 //External functions
-const endpoints = require("./server_endpoints.js");
+const endpoints = require("./endpoints/endpoints.js");
 
 if(process.env.NODE_ENV == "production"){
     let vars = JSON.parse(process.env.API_KEYS);
@@ -103,10 +101,6 @@ server_app.register(cors, {
 server_app.register(fastifyCookie);
 server_app.register(fastifySession, cookie);
 
-
-console.log("Setting root to return 200, as a health check.");
-server_app.get('/', async (request, reply) => { return reply.code(200).send({ status: "ok" }); }); //use the root as a health check, and to set cookies on first access
-server_app.get('/*', async (request, reply) => { console.log("unavailable, return 404"); return reply.code(404).send({ error: "endpoint not found" }); }); //Catch-all 404 response
 
 //register all endpoints with this instance of fastify.
 server_app.register(endpoints.api_auth);
