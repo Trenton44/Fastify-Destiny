@@ -1,15 +1,3 @@
-
-let GetMembershipData = {
-    "components": {
-        "schemas": {
-            "User.UserMembershipData": {
-                "transform": function(data){
-                    console.log("Made it here!");
-                    return data;
-                }
-            }
-        }
-    }
-};
-
-module.exports = {GetMembershipData};
+const standard_config = require("../global-config.js").config;
+standard_config["x-mapped-definition"] = false;
+module.exports = standard_config;

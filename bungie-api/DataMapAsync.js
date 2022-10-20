@@ -116,7 +116,7 @@ function ProcessXComponentType(key_array, data, xtypeheader, config){
         return false;
 }
 
-function ProcessXEnumReference(data, xtypeheader){
+function ProcessXEnumReference(data, xtypeheader, return_type){
     //enum reference means it's got a integer representing some other value.
     //that value is found in the schema under an x-enum-value array of objects
     //So we go to that schema, find the object with this numericValue, and return it's corresponding identifier
@@ -126,7 +126,9 @@ function ProcessXEnumReference(data, xtypeheader){
     if(xmappedschema){
         for(i in xmappedschema["x-enum-values"]){
             if(xmappedschema["x-enum-values"][i].numericValue == data){
-                return xmappedschema["x-enum-values"][i].identifier;
+                if(return_type) { return xmappedschema["x-enum-values"][i].numericValue; } 
+                else { return xmappedschema["x-enum-values"][i].identifier; }
+                    
             }
                 
         }
@@ -140,7 +142,7 @@ function customTransformations(key_array, data, xtypeheaders, config){
             return result;
     }
     if(xtypeheaders["x-enum-reference"]){
-        let result = ProcessXEnumReference(data, xtypeheaders["x-enum-reference"]["$ref"]);
+        let result = ProcessXEnumReference(data, xtypeheaders["x-enum-reference"]["$ref"] , config["x-enum-values"]);
         if(result)
             return result;
     }
@@ -165,7 +167,7 @@ function getXTypeHeaders(schema){
 function Entrypoint(path, request_type, status_code, data, config){
     let key_array = ["paths", path, request_type, "responses", status_code, "$ref"];
     let [ref_array, schema] = findSchema(key_array); //return the schema for the response
-    key_array = ["content", "application/json", "schema","properties", "Response", "$ref"];
+    key_array = ["content", "application/json", "schema", "properties", "Response", "$ref"];
     [ref_array, schema] = findSchema(key_array, schema); //return the schema for the response's data.
     return propertyProcessController(ref_array, schema, data, config, true); //Data mapping starts here.
 }
@@ -196,6 +198,8 @@ async function propertyProcessController(key_array, schema, data, config, isNewS
         default:
             processed_data = processBasicSchema(key_array, schema, data, indexed, config)
             .then( (data) => { 
+                if(!config["x-mapped-definition"])
+                    return customTransformations(key_array, data, xtypeheaders, config)
                 let [xmapkeys, results] = getXMappedDefinition(key_array, data, xtypeheaders["x-mapped-definition"]);
                 if(xmapkeys){
                     results.id = customTransformations(key_array, results.id, xtypeheaders, config);

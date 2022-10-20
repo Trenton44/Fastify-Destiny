@@ -20,7 +20,6 @@ function saveTokenData(session_store, token_data){
 
 async function validateSession(sessionstore){
     if(!sessionstore.auth_data){
-        console.log(sessionstore.query_code);
         if(!sessionstore.query_code)
             return Promise.reject({ error: "you have not given authorization to this API yet." });
         await d2api.requestAccessToken(sessionstore.query_code)
@@ -39,17 +38,15 @@ async function validateSession(sessionstore){
     if(!sessionstore.d2_account){
         //console.log("no data found, but we know membership_id exists, so we will pull d2 data from bungie.")
         // create a config object for this d2 request inside this folder (/AuthO), make a request with the openapischemaurl, the config object, and necessary paraemters to get back the info.
-        await d2api.GetMembershipDataById(sessionstore.auth_data.access_token, sessionstore.user_data.membership_id, "-1", config.GetMembershipData)
+        await d2api.GetMembershipDataById(sessionstore.auth_data.access_token, sessionstore.user_data.membership_id, "-1", config)
         .then( (result) => {
             sessionstore.user_data.d2_account = result;
             if(result.primaryMembershipId)
                 sessionstore.user_data.active_account_id = result.primaryMembershipId; //if primary membership id is valid, set it as the active account for the frontend.
             else
-                sessionstore.user_data.active_account_id = sessionstore.user_data.destinyMemberships[0].membershipId; //otherwise, look through the array of accounts for one that fits, and make it the active for the frontend. frontend will be responsible for allowing change of this later.
-            return true;
+                sessionstore.user_data.active_account_id = Object.keys(result.destinyMemberships)[0]; //if no primarymembership, just take the first membership that shows up.
         })
         .catch( (error) => d2api.bungieErrorResponse(error, "well, something went wrong obtaining d2_membership_id, so you need to re-authenticate."));
-
     }
     return Promise.resolve(sessionstore.user_data.active_account_id);
 }

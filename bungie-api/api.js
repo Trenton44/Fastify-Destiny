@@ -129,7 +129,7 @@ function requestAccessToken(authorization_code){
             code: authorization_code,
         })
     };
-    return axios(request_body)
+    return axios(request_body);
 }
 function requestRefreshToken(refresh_token){
     let request_body = {
@@ -143,7 +143,7 @@ function requestRefreshToken(refresh_token){
             refresh_token: refresh_token, //this was decrypted in original code here, will need to add this functionality
         })
     };
-    return axios(request_body)
+    return axios(request_body);
 }
 
 function bungieErrorResponse(error, message){
