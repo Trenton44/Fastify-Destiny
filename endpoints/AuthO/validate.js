@@ -31,7 +31,7 @@ async function validateSession(sessionstore){
     if(Date.now() > access_expire){
         if(Date.now() > refresh_expire)
             return Promise.reject({error: "Refresh token expired, user will need to re-authenticate"});
-        await d2api.requestRefreshToken()
+        await d2api.requestRefreshToken(sessionstore.auth_data.refresh_token)
         .then( (result) => saveTokenData(sessionstore, result.data))
         .catch( (error) => d2api.bungieErrorResponse(error, "Refresh token expired, user will need to re-authenticate"));
     }
