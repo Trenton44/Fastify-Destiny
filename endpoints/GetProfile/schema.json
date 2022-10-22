@@ -9,18 +9,14 @@
             "components": { 
                 "type": "array",
                 "uniqueItems": true,
-                "items": { "type": "string" }
+                "items": { 
+                    "oneOf": [
+                        { "type": "number" },
+                        { "type": "string" }
+                    ]
+                }
             },
             "sortBy": { "type": "string" }
-        }
-    },
-    "response": {
-        "200": {
-            "content": {
-                "application/json": {
-                    "type": "object"
-                }
-            }
         }
     }
 }
