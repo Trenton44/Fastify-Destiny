@@ -48,16 +48,17 @@ function GetProfile(membershipId, membershipType, components, token, datatransfo
         membershipType: membershipType,
         destinyMembershipId: membershipId,
     }
-    let path = new URL(api_root+InjectParametersIntoAPIURL(openapi_url, pathparams));
+    let path = new URL(api_root+InjectParametersIntoAPIURL(openapiurl, pathparams));
     path.search = new URLSearchParams({ components: components });
     path = path.toString();
     return get(path, token)
     .then( (result) => [result.status, result.data])
     .then( ([status, data]) => {
-        data = dataprocess(openapiurl, "get", status, data.Response, datatransform);
-        return data;
+        return Promise.resolve(dataprocess(openapiurl, "get", status, data.Response, datatransform));
     })
-    .catch( (error) => Promise.reject(error));
+    .catch( (error) => {
+        return Promise.reject(error);
+    });
 }
 
 /**
@@ -153,4 +154,4 @@ function bungieErrorResponse(error, message){
     return Promise.reject({ error: error });
 }
 
-module.exports = { requestAccessToken, requestRefreshToken, bungieErrorResponse, GetDestinyManifest, GetMembershipDataById, GetProfile};
+module.exports = { requestAccessToken, requestRefreshToken, bungieErrorResponse, GetDestinyManifest, GetMembershipDataById, GetProfile };
