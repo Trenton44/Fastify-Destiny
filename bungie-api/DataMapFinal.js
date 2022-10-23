@@ -1,11 +1,45 @@
 const api_doc = require("./openapi.json");
 const Definitions = require("./manifest/en/world_content.json");
 
-class DataController {
-    constructor(language){
-        this.Definitions = require("./manifest/"+language+"/world_content.json");
+let config_object = {
+    "x-mapped-definition": true,  //must be true/false. if true, map hashes to their definitions
+    "x-enum-values": true, //must be true/false. if true, returns the "numericValue" of the enum. if false, returns the "identifier" (that's how the bungie api stores these. it will return identifier if null)
+    "sortBy": {
+    },
+    "groupBy": {
+        
+    },
+    "filterBy": {
+        
+    },
+    "append": {},
+    "components": {
+        "schemas": {
+            "Destiny.Responses.DestinyProfileResponse": {
+                "transform": function(data) {
+                    console.log("made it here!");
+                    console.log(this);
+                }
+            }
+        }
     }
+};
+
+
+class DataController {
     setConfig(config){ this.config = config; }
+    #getXTypeHeaders(schema_obj){
+        let keys = Object.keys(schema_obj);
+        let results = {};
+        this.xtypeheaders.forEach( (element) => {
+            results[element] = false;
+            keys.forEach( (current) => {
+                if(element == current)
+                    results[element] = schema_obj[current];
+            })
+        });
+        return results;
+    }
     #GroupArrayByKey(data, key){
         let temp = {};
         data.forEach( (element) => {
@@ -65,6 +99,8 @@ class DataController {
     }
     findSchema(keylist, schema){
         let obj = this.traverseObject(keylist, schema);
+        if(!obj)
+            return [false, false];
         let isref = this.traverseObject(["$ref"], obj);
         if(!isref)
             return [keylist, false];
@@ -81,45 +117,41 @@ class DataController {
         return reference(data);
 
     }
-    ProcessGrouped(data, keylist, xtypeheaders){
-        if(xtypeheaders["x-destiny-component-type-dependency"]){
-        }
-        if(xtypeheaders["x-enum-reference"]){
-
-        }
+    transformObject(data, keylist, xtypeheaders){
+        if(data.data){ return data.data; }
+        if(data.items){ return data.items; }
+        return data;
     }
-    ProcessBasic(data, keylist, xtypeheaders){
+    transformArray(data, keylist, xtypeheaders){
+        return data;
+    }
+    transformBasic(data, keylist, xtypeheaders){
         //check config flag, to see if x-map-definitions should be mapped
-        if(this.config["x-mapped-definition"]){
-            let xmapref = parseSchemaRef(xtypeheaders["x-mapped-definition"]["$ref"]);
+        /*if(xtypeheaders["x-mapped-definition"]){
+            let xmapref = this.parseSchemaRef(xtypeheaders["x-mapped-definition"]["$ref"]); //just return the schema, don't care if this isref or not
             if(xmapref){
-                let xmapkeylist = parseSchemaRef(xmapref[xmapref.length - 1], ".");
-                let definitionkeylist = xmapkeylist.pop();
-                definitionkeylist.push(data);
+                let xmapkeylist = this.parseSchemaRef(xmapref[xmapref.length - 1], ".");
+                let definitionkeylist = [xmapkeylist.pop(), data];
+                console.log("Traversing x-mapped-def: "+keylist+" Data: "+data);
+                console.log(this.traverseObject(definitionkeylist, Definitions));
+                return {
+                    id: data,
+                    mapped: this.traverseObject(definitionkeylist, Definitions)
+                };
                 //do customtransformations on both hashid and mapped data.
             }
-        }
+        }*/
+        
+        return data;
     }
 }
 
 class DataMap {
-    constructor(schema, data, controller, language){
+    constructor(schema, data, language){
         this.xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
         this.schema = schema;
         this.data = data;
-        this.controller = new DataController("en");
-    }
-    #getXTypeHeaders(schema_obj){
-        let keys = Object.keys(schema_obj);
-        let results = {};
-        this.xtypeheaders.forEach( (element) => {
-            results[element] = false;
-            keys.forEach( (current) => {
-                if(element == current)
-                    results[element] = schema_obj[current];
-            })
-        });
-        return results;
+        this.controller = new DataController();
     }
     getPathSchema(openapilink, response_code, request_type){
         let keys = ["paths", openapilink, request_type, "responses", response_code];
@@ -133,57 +165,57 @@ class DataMap {
         this.data = data;
         this.controller.setConfig(config);
         let schemakeylist = this.getPathSchema(request.link, request.code, request.type);
+        let result =  this.#ProcessJSONLevel([], schemakeylist);
         return this.#ProcessJSONLevel([], schemakeylist);
     }
     #ProcessJSONLevel(datakeylist, schemakeylist) {
-        let xtypeheaders = this.#getXTypeHeaders(this.controller.traverseObject(schemakeylist, this.schema)); //may need to fetch this in all the subtypes
-        let nextdata = this.controller.traverseObject(datakeylist, this.data);
         let nextschema = this.controller.traverseObject(schemakeylist, this.schema);
+        let data = this.controller.traverseObject(datakeylist, this.data);
         switch(nextschema.type){
             case "object": {
                 if(nextschema.properties){
                     let [newschemakeylist, isref] = this.controller.findSchema([...schemakeylist, "properties"], this.schema);
-                    let keys = Object.keys(nextdata);
-                    let results = {};
-                    keys.forEach( (element) => {
-                        let [thisschemakeylist, isref] = this.controller.findSchema([...newschemakeylist, element]);
-                        if(!isref){
-                            if(!thisschemakeylist && xtypeheaders["x-dictionary-key"])
-                                thisschemakeylist.push(Object.keys(this.controller.findSchema(thisschemakeylist))[0], this.schema);
-                            else
-                                results[element] = this.controller.traverseObject([...datakeylist, element], this.data);
+                    let keys = Object.keys(data);
+                    let result = {};
+                    keys.forEach( (property) => {
+                        let [thisschemakeylist, isref] = this.controller.findSchema([...newschemakeylist, property], this.schema);
+                        if(!isref && !thisschemakeylist){
+                            result[property] = data[property];
+                            return;
                         }
-                        results[element] = this.#ProcessJSONLevel([...datakeylist, element], thisschemakeylist);
+                        result[property] = this.#ProcessJSONLevel([...datakeylist, property], thisschemakeylist);
+                        return;
                     });
-                    results = this.controller.transform(results, newschemakeylist, xtypeheaders);
-                    return results;
+                    return this.controller.transformObject(result, schemakeylist);
                 }
                 else if(nextschema.additionalProperties){
                      //finds additionalProperties, and returns schemakeylist with added "additionalProperties." check for $ref, and if found, return that new keylist instead. 
                     let [newschemakeylist, isref] = this.controller.findSchema([...schemakeylist, "additionalProperties"], this.schema);
-                    let results = {};
-                    Object.keys(nextdata).forEach( (property) => { results[property] = this.#ProcessJSONLevel([...datakeylist, property], newschemakeylist); });
-                    results = this.controller.transform(results, newschemakeylist, xtypeheaders);
-                    return results;
+                    let result = {};
+                    Object.keys(data).forEach( (property) => { result[property] = this.#ProcessJSONLevel([...datakeylist, property], newschemakeylist); });
+                    return this.controller.transformObject(result, schemakeylist);
                 }
                 else if(nextschema.allOf){
                     let [newschemakeylist, isref] = this.controller.findSchema([...schemakeylist, "allOf", 0], this.schema);
                     if(!isref)
                         throw Error("First instance of allOf without a $ref, don't currently support this.");
-                    let results = this.#ProcessJSONLevel(datakeylist, newschemakeylist);
-                    return this.controller.transform(results, newschemakeylist, xtypeheaders);
+                    let result = this.#ProcessJSONLevel(datakeylist, newschemakeylist);
+                    return this.controller.transformObject(result, schemakeylist)
                 }
+                else
+                    throw Error("This object has no properties, God help us all.");
+                break;
             }
             case "array": {
                 let [newschemakeylist, isref] = this.controller.findSchema([...schemakeylist, "items"], this.schema);
-                let results = nextdata.map( (current, index) => { return this.#ProcessJSONLevel([...datakeylist, index], newschemakeylist, isref); });
-                results = this.controller.transform(results, newschemakeylist, xtypeheaders);
-                return results;
+                data.forEach( (current, index) => { this.#ProcessJSONLevel([...datakeylist, index], newschemakeylist); });
+                return this.controller.transformArray(data, schemakeylist);
             }
             default: {
-                return this.controller.transform(nextdata, schemakeylist, xtypeheaders);
+                return this.controller.transformBasic(data, schemakeylist);
             }
         }
+        return true;
     }
 }
 const data = require("../env-files/profileData.json");
