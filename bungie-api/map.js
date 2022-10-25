@@ -66,34 +66,71 @@ class DataMap {
     start(requestobj, data, config){
         let [schema, refkeylocale] = getPathSchema(requestobj.link, requestobj.code, requestobj.type);
         if(config){ this.setConfig(config); }
-        return this.ProcessJSONLevel(data, schema, refkeylocale);
+        refkeylocale.shift();
+        refkeylocale.shift();
+        return this.ProcessJSONLevel(data, schema, [refkeylocale]);
     }
-    SearchConfigForParameter(locationkeyist, parameter){
-        let schemalevel = [];
+    SearchNestedConfigParameter(locationkeylist, parameter){
         let temp = this.config;
-        for(let key of locationkeyist){
+        try{ temp = temp["components"]["schemas"]; }
+        catch{ return undefined; }
+        let search = locationkeylist.flat();
+        let configlist = [];
+        for(let key of search){
             if(temp == undefined){ break; }
-            schemalevel.unshift(temp); //Add them in reverse order, to check the bottom level first.
             temp = temp[key];
-            //look at next level. if there's no level, stop searching
-            
+            if(temp == undefined){ break; }
+            configlist.unshift(temp);
         }
-        for(let level of schemalevel){
-            if(level[parameter] != undefined){
-                console.log("FOUND PARAMETER AT "+level);
-                return level[parameter];
+        for(let config of configlist){
+            if(config[parameter] != undefined){
+                return config[parameter];
             }
-                
         }
+        return undefined;
+    }
+    SearchGlobalConfigParameter(locationkeylist, parameter){
+        let schemastemp = this.config;
+        try{ schemastemp = schemastemp["components"]["schemas"]; }
+        catch{ return undefined; }
+        for(let list of locationkeylist){
+            let temp = schemastemp;
+            let configlist = [];
+            for(let key of list){
+                if(temp == undefined){ break; }
+                temp = temp[key];
+                if(temp == undefined){ break; }
+                configlist.unshift(temp);
+            }
+            for(let config of configlist){
+                if(config[parameter] != undefined){
+                    return config[parameter];
+                }
+            }
+        }
+        return undefined;
+    }
+    SearchConfigForParameter(locationkeylist, parameter){
+        //search for a parameter within this specific chain of keys
+        let nestedp = this.SearchNestedConfigParameter(locationkeylist, parameter);
+        if(nestedp != undefined)
+            return nestedp;
+        //search for a parameter, using each key in the keylist independently, across all of api_doc.components.schemas
+        let globalp = this.SearchGlobalConfigParameter(locationkeylist, parameter);
+        if(globalp != undefined)
+            return globalp;
         return false;
-
     }
     getNextParts(searchkeylist, schema, configlocation){
         let [nextschema, refkeys] = findSchema(searchkeylist, schema);
-        if(refkeys)
-            return [ nextschema, refkeys, true ];
-        else
-            return[ nextschema, configlocation.slice(0), false];
+        let isref = false;
+        if(refkeys){
+            refkeys.shift(); //remove "components"
+            refkeys.shift(); //remove "schemas" (we want these keys to be relative to api_doc.components.schemas)
+            configlocation.push(refkeys);
+            isref = true;
+        }
+        return[ nextschema, configlocation, isref];
     }
     transform(data, configlocation, xtypeheaders){
         if(this.config.condenseAPI){
@@ -115,7 +152,7 @@ class DataMap {
         if(xtypeheaders["x-enum-reference"]){
             // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
             let shouldbemapped = this.SearchConfigForParameter(configlocation, "x-mapped-definition");
-            data = { id: data, isenum: true } //getXEnumReference(data, xtypeheaders["x-enum-reference"], shouldbemapped);
+            data = { id: data, isenum: shouldbemapped } //getXEnumReference(data, xtypeheaders["x-enum-reference"], shouldbemapped);
         }
         //This one doesn't use SearchConfigForParameter because we only want to look for transform in this config
         let customtransform = traverseObject([...configlocation, "transform"], this.config)[0];
@@ -124,7 +161,16 @@ class DataMap {
         return data;
     }
     ProcessJSONLevel(data, schema, configlocation) {
+        console.log("");
+        console.log("Config location: ");
+        for(let loc of configlocation){
+            console.log("next: ");
+            console.log(loc.toString());
+        }
         let xtypeheaders = getXTypeHeaders(schema);
+        if(xtypeheaders["x-dictionary-key"]){
+            console.log("this is keyed.");
+        }
         switch(schema.type){
             case "object":
                 if(schema.properties){
@@ -186,7 +232,10 @@ let config_object = {
             },
             "Destiny.Entities.Items.DestinyItemComponent": {
                 "x-mapped-definition": true,
-            }
+            },
+            "SingleComponentResponseOfDestinyInventoryComponent": {
+                "x-mapped-definition": false
+            },
         }
     }
 };
