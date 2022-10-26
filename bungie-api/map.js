@@ -1,4 +1,5 @@
 const api_doc = require("./openapi.json");
+const formatter = require("./transform.js");
 const xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
 
 // At the end of the day, I need ONE of the following:
@@ -52,14 +53,47 @@ function getXTypeHeaders(schema_obj){
     return results;
 }
 
+function getXEnumReferences(data, xenumheader, returntype){
+    let keylist = parseSchemaRef(xenumheader["$ref"]);
+    let xenumschema = traverseObject(keylist, api_doc);
+    if(!xenumschema)
+        return data;
+    for(let element of xenumschema["x-enum-values"]){
+        if(element.numericValue == data){
+            if(returntype){ return element.identifier; }
+            else{ return element.numericValue; }
+        }
+    }
+}
+function getXMapped(data, xmapheader, definition){
+    let keys = parseSchemaRef(xmapheader["$ref"]);
+    if(!keys){ return data; }
+    let defkeys = parseSchemaRef(keys[keys.length - 1], ".");
+    defkeys = defkeys.slice(defkeys.length - 1);
+    if(typeof data === "object"){
+        if(data instanceof Array)
+            return data; //Arrays of hashes are usually things like DestinySeasonDefinition, we don't want to map those.
+        Object.keys(data).forEach( (element) => { data[element].mapped = traverseObject([...defkeys, element], definition) });
+    }
+    else {
+        return {
+            id: data,
+            data: traverseObject([...defkeys, data], definition)
+        }
+    }
+    return data; //return original by default
+}
+
+
 
 class DataMap {
-    constructor(){
+    constructor(definition){
         this.config = {};
+        if(!definition){ throw Error("A Bungie API Manifest is required."); }
+        this.definition = definition;
     }
     setConfig(configObj){
-        if(!configObj)
-            throw Error("No config object was passed.");
+        if(!configObj){ throw Error("No config object was passed."); }
         this.config = configObj;
         return true;
     }
@@ -68,39 +102,66 @@ class DataMap {
         if(config){ this.setConfig(config); }
         refkeylocale.shift();
         refkeylocale.shift();
-        return this.ProcessJSONLevel(data, schema, [{ref:refkeylocale[0]}]);
+        return this.ProcessJSONLevel(data, schema, [{ property:refkeylocale[0] }]);
     }
-    SearchConfigParameter(keylist, parameter, schema){
-
+    SearchConfigParameter(keylist, schema, parameter, counter=0){
+        //console.log("Checking "+counter+": "+keylist.toString());
+        keylist = keylist.slice(0);
+        if(schema == undefined){ return undefined; }
+        //console.log(keylist);
+        //console.log(schema);
+        let validkeys = {};
+        let keys = keylist.shift();
+        for(let key in keys){
+            if(schema[keys[key]] != undefined)
+            validkeys[key] = schema[keys[key]];
+        }
+        let validpaths = {};
+        //console.log(counter+": checking child paths: ");
+        for(let key in validkeys){
+            let temp = this.SearchConfigParameter(keylist, validkeys[key], parameter, counter+1);
+            if(temp != undefined)
+                validpaths[key] = temp;
+        }
+        //console.log(validpaths);
+        if(Object.keys(validpaths).length == 0){
+            //console.log("There are no more valid paths, start checking recursively for the value.");
+            //console.log("return value: "+schema[parameter]);
+            return schema[parameter];
+        }
+        else{
+            //console.log("A VALID PATH HAS BEEN FOUND SOMEWHERE BELOW "+counter);
+            //console.log(validpaths);
+            if(validpaths["property"] != undefined){ return validpaths["property"]; }
+            if(validpaths["ref"] != undefined){ return validpaths["ref"]; }
+            if(validpaths["dependency"] != undefined){ return validpaths["dependency"]; }
+            //console.log("You lied to me.");
+            return undefined;
+        }
+    }
+    getExactDataPath(configlocation){
+        return configlocation.map( (element) => { return element.property; });
     }
     transform(data, configlocation, xtypeheaders){
-        if(this.config.condense){
+        if(this.SearchConfigParameter(configlocation, this.config["components"]["schemas"], "condense")){
             if(data.data){ return data.data; }
             if(data.items){ return data.items; }
         }
         if(xtypeheaders["x-mapped-definition"]){
-            //reverse search through the configlocation array for a x-mapped definition parameter. If found, use it, if not, assume no mapping.
-            // Idea is, if we're in DestinyItemDefinition/itemHash, and we didn't specify to map it in /itemHash, check /DestinyItemDefinition to see if we specified it there.
-            // That way, the config object can define on any level what should/shouldn't be hashmapped, and lets me control exactly what i want hashed.
-            let shouldbemapped = this.SearchConfigParameter(configlocation, "x-mapped-definition", this.schema);
-            if(shouldbemapped){
-                //change the mapped value to an object, with keys id and data.
-                // Add a check later in this function that checks children for this combo, and pulls the data out if true
-                // that way the parent ends up storing data as "mapped" key, and the hash will still only return the hash.
-                console.log("Result of x-mapped: "+shouldbemapped);
-                data = {id: data, mapped: true };
-            }
+            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config["components"]["schemas"], "x-mapped-definition");
+            if(shouldbemapped)
+                data = getXMapped(data, xtypeheaders["x-mapped-definition"], this.definition);
         }
         if(xtypeheaders["x-enum-reference"]){
             // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
-            let shouldbemapped = this.SearchConfigParameter(configlocation, "x-enum-values", this.schema);
-            console.log("Found x-enum: "+shouldbemapped);
-            data = { id: data, isenum: shouldbemapped } //getXEnumReference(data, xtypeheaders["x-enum-reference"], shouldbemapped);
+            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config["components"]["schemas"], "x-enum-values");
+            //console.log("Found x-enum: "+shouldbemapped);
+            data = getXEnumReferences(data, xtypeheaders["x-enum-reference"], shouldbemapped);
         }
+        let directDataPath = this.getExactDataPath(configlocation);
         //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
-        let customtransform = traverseObject([...configlocation, "transform"], this.config)[0];
-        if(customtransform)
-            return customtransform(data);
+        let customoptions = traverseObject(directDataPath, this.config["components"]["schemas"]);
+        data = formatter(data, customoptions);
         return data;
     }
     getNextParts(searchkeylist, schema){
@@ -165,14 +226,14 @@ class DataMap {
     }
 }
 
-
+const definitions = require("./manifest/en/world_content.json");
 const data = require("../env-files/profileData.json");
 let config_object = {
-      //must be true/false. if true, map hashes to their definitions
-    "x-enum-values": true, //must be true/false. if true, returns the "numericValue" of the enum. if false, returns the "identifier" (that's how the bungie api stores these. it will return identifier if null)
-    "condenseAPI": true,
     "components": {
         "schemas": {
+            "condense": true,
+            "x-mapped-definition": true,
+            "x-enum-values": true,
             "Destiny.Responses.DestinyProfileResponse": {
                 "profileInventory": {
                     "x-enum-values": false,
@@ -183,7 +244,7 @@ let config_object = {
                 },
             },
             "Destiny.Entities.Items.DestinyItemComponent": {
-                "x-mapped-definition": true,
+                
             },
             "SingleComponentResponseOfDestinyInventoryComponent": {
                 "x-mapped-definition": false
@@ -196,7 +257,7 @@ request_object = {
     type: "get",
     code: "200",
 };
-let map = new DataMap();
+let map = new DataMap(definitions);
 let result = map.start(request_object, data, config_object);
 let test = JSON.stringify(result);
 const fs = require('fs');
