@@ -68,72 +68,13 @@ class DataMap {
         if(config){ this.setConfig(config); }
         refkeylocale.shift();
         refkeylocale.shift();
-        return this.ProcessJSONLevel(data, schema, [refkeylocale]);
+        return this.ProcessJSONLevel(data, schema, [{ref:refkeylocale[0]}]);
     }
-    SearchNestedConfigParameter(locationkeylist, parameter){
-        let temp = this.config;
-        try{ temp = temp["components"]["schemas"]; }
-        catch{ return undefined; }
-        let search = locationkeylist.flat();
-        let configlist = [];
-        for(let key of search){
-            if(temp == undefined){ break; }
-            temp = temp[key];
-            if(temp == undefined){ break; }
-            configlist.unshift(temp);
-        }
-        for(let config of configlist){
-            if(config[parameter] != undefined){
-                return config[parameter];
-            }
-        }
-        return undefined;
-    }
-    SearchGlobalConfigParameter(locationkeylist, parameter){
-        let schemastemp = this.config;
-        try{ schemastemp = schemastemp["components"]["schemas"]; }
-        catch{ return undefined; }
-        for(let list of locationkeylist){
-            let temp = schemastemp;
-            let configlist = [];
-            for(let key of list){
-                if(temp == undefined){ break; }
-                temp = temp[key];
-                if(temp == undefined){ break; }
-                configlist.unshift(temp);
-            }
-            for(let config of configlist){
-                if(config[parameter] != undefined){
-                    return config[parameter];
-                }
-            }
-        }
-        return undefined;
-    }
-    SearchConfigForParameter(locationkeylist, parameter){
-        //search for a parameter within this specific chain of keys
-        let nestedp = this.SearchNestedConfigParameter(locationkeylist, parameter);
-        if(nestedp != undefined)
-            return nestedp;
-        //search for a parameter, using each key in the keylist independently, across all of api_doc.components.schemas
-        let globalp = this.SearchGlobalConfigParameter(locationkeylist, parameter);
-        if(globalp != undefined)
-            return globalp;
-        return false;
-    }
-    getNextParts(searchkeylist, schema, configlocation){
-        let [nextschema, refkeys] = findSchema(searchkeylist, schema);
-        let isref = false;
-        if(refkeys){
-            refkeys.shift(); //remove "components"
-            refkeys.shift(); //remove "schemas" (we want these keys to be relative to api_doc.components.schemas)
-            configlocation.push(refkeys);
-            isref = true;
-        }
-        return[ nextschema, configlocation, isref];
+    SearchConfigParameter(keylist, parameter, schema){
+
     }
     transform(data, configlocation, xtypeheaders){
-        if(this.config.condenseAPI){
+        if(this.config.condense){
             if(data.data){ return data.data; }
             if(data.items){ return data.items; }
         }
@@ -141,74 +82,85 @@ class DataMap {
             //reverse search through the configlocation array for a x-mapped definition parameter. If found, use it, if not, assume no mapping.
             // Idea is, if we're in DestinyItemDefinition/itemHash, and we didn't specify to map it in /itemHash, check /DestinyItemDefinition to see if we specified it there.
             // That way, the config object can define on any level what should/shouldn't be hashmapped, and lets me control exactly what i want hashed.
-            let shouldbemapped = this.SearchConfigForParameter(configlocation, "x-mapped-definition");
+            let shouldbemapped = this.SearchConfigParameter(configlocation, "x-mapped-definition", this.schema);
             if(shouldbemapped){
                 //change the mapped value to an object, with keys id and data.
                 // Add a check later in this function that checks children for this combo, and pulls the data out if true
                 // that way the parent ends up storing data as "mapped" key, and the hash will still only return the hash.
+                console.log("Result of x-mapped: "+shouldbemapped);
                 data = {id: data, mapped: true };
             }
         }
         if(xtypeheaders["x-enum-reference"]){
             // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
-            let shouldbemapped = this.SearchConfigForParameter(configlocation, "x-mapped-definition");
+            let shouldbemapped = this.SearchConfigParameter(configlocation, "x-enum-values", this.schema);
+            console.log("Found x-enum: "+shouldbemapped);
             data = { id: data, isenum: shouldbemapped } //getXEnumReference(data, xtypeheaders["x-enum-reference"], shouldbemapped);
         }
-        //This one doesn't use SearchConfigForParameter because we only want to look for transform in this config
+        //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
         let customtransform = traverseObject([...configlocation, "transform"], this.config)[0];
         if(customtransform)
             return customtransform(data);
         return data;
     }
-    ProcessJSONLevel(data, schema, configlocation) {
-        console.log("");
-        console.log("Config location: ");
-        for(let loc of configlocation){
-            console.log("next: ");
-            console.log(loc.toString());
+    getNextParts(searchkeylist, schema){
+        let [nextschema, refkeys] = findSchema(searchkeylist, schema);
+        let isref = false;
+        if(refkeys){
+            refkeys.shift();
+            refkeys.shift();
+            isref = refkeys[0];
         }
+        return[ nextschema, isref ];
+    }
+    ProcessJSONLevel(data, schema, configlocation){
         let xtypeheaders = getXTypeHeaders(schema);
-        if(xtypeheaders["x-dictionary-key"]){
-            console.log("this is keyed.");
-        }
+        let result = {};
         switch(schema.type){
             case "object":
                 if(schema.properties){
                     let result = {};
                     Object.keys(data).forEach( (property) => {
-                        let [nextschema, nextconfiglocation, isref] = this.getNextParts(["properties", property], schema, configlocation);
+                        let [nextschema, isref] = this.getNextParts(["properties", property], schema);
+                        let nextc = {};
+                        if(isref){ nextc.ref = isref }
+                        if(xtypeheaders["x-mapped-definition"]){ nextc.dependency = xtypeheaders["x-mapped-definition"]; }
+                        nextc.property = property;
+                        let nextconfiglocation = [...configlocation, nextc];
                         if(!isref && !nextschema)
                             result[property] = data[property]; //item doesn't exist in openapi documentation, so just return as-is
                         else
-                        result[property] = this.ProcessJSONLevel(data[property], nextschema, nextconfiglocation);
+                            result[property] = this.ProcessJSONLevel(data[property], nextschema, nextconfiglocation);
                     });
                     return this.transform(result, configlocation, xtypeheaders);
                 }
                 else if(schema.additionalProperties){
-                    let [nextschema, nextconfiglocation] = this.getNextParts(["additionalProperties"], schema, configlocation);
+                    let [nextschema, isref] = this.getNextParts(["additionalProperties"], schema);
+                    if(isref){ configlocation[configlocation.length - 1].ref = isref; }
                     let result = {};
                     Object.keys(data).forEach( (property) => { 
-                        result[property] = this.ProcessJSONLevel(data[property], nextschema, nextconfiglocation);
+                        result[property] = this.ProcessJSONLevel(data[property], nextschema, configlocation);
                     });
                     return this.transform(result, configlocation, xtypeheaders);
                 }
                 else if(schema.allOf){
-                    let [nextschema, nextconfiglocation] = this.getNextParts(["allOf", 0], schema, configlocation);
-                    let result = this.ProcessJSONLevel(data, nextschema, nextconfiglocation);
+                    let [nextschema, isref] = this.getNextParts(["allOf", 0], schema);
+                    if(isref){ configlocation[configlocation.length - 1].ref = isref; }
+                    let result = this.ProcessJSONLevel(data, nextschema, configlocation);
                     return this.transform(result, configlocation, xtypeheaders);
                 }
                 else
                     throw Error("This object has no properties, God help us all.");
             case "array": {
-                let [nextschema, nextconfiglocation] = this.getNextParts(["items"], schema, configlocation);
+                let [nextschema, isref] = this.getNextParts(["items"], schema);
+                if(isref){ configlocation[configlocation.length - 1].ref = isref; }
                 let result = [];
-                data.forEach( (current, index) => { result.push(this.ProcessJSONLevel(current, nextschema, nextconfiglocation)); });
+                data.forEach( (current, index) => { result.push(this.ProcessJSONLevel(current, nextschema, configlocation)); });
                 return this.transform(result, configlocation, xtypeheaders);
             }
-            default: {
+            default:
                 let result = data;
                 return this.transform(result, configlocation, xtypeheaders);
-            }
         }
     }
 }
