@@ -3,14 +3,14 @@ function FormatFromConfig(data, options){
     if(customoptions["reduce"]){
         data = ReduceObject(data, customoptions["reduce"]);
     }
-    if(customoptions["group"]){
-        data = GroupObjectToKey(data, customoptions["group"]);
+    if(customoptions["append"]){
+        data = AppendToObject(data, customoptions["append"]);
     }
     if(customoptions["filter"]){
         data = FilterByKeyValue(data, customoptions["filter"]);
     }
-    if(customoptions["append"]){
-        data = AppendToObject(data, customoptions["append"]);
+    if(customoptions["attach"]){
+        data = AttachObjectByKeyValue(data, customoptions["attach"]);
     }
     if(customoptions["combine"]){
         if(customoptions["combine"] == "*")
@@ -18,8 +18,8 @@ function FormatFromConfig(data, options){
         else
             data = Group
     }
-    if(customoptions["attach"]){
-        data = AttachObjectByKeyValue(data, customoptions["attach"]);
+    if(customoptions["group"]){
+        data = GroupObjectToKey(data, customoptions["group"]);
     }
     return data;
 }
