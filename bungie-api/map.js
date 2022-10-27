@@ -1,44 +1,6 @@
-const api_doc = require("./openapi.json");
-const formatter = require("./transform.js");
 const xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
-
-// At the end of the day, I need ONE of the following:
-//  data, schema, config, this schema's location (minus json schema keywords, like .items)
-// a class holding config state, function passes data, schema, schema location (minus keywords)
-// datakeylist, schemakeylist, a class holding data and schema state
-function traverseObject(keylist, obj){
-    try{ keylist.forEach( (key) => { obj = obj[key]; }); }
-    catch{ return false; }
-    if(obj == undefined){ return false; }
-    return obj;
-}
-function parseSchemaRef(ref_link, delimiter){
-    if(!delimiter) { delimiter = "/"; }  //local schema ref's use /, so defaulting to it.
-    let link_array = ref_link.split(delimiter);
-    if(link_array[0] === "#") { return link_array.slice(1); } //return without leading # if it exists
-    return link_array;
-}
-
-//searches through a json schema with the given keylist.
-//returns the found schema, and if that schema contained a $ref to another schema, returns the keylist to reach that schema
-function findSchema(keylist, schema){
-    let obj = traverseObject(keylist, schema);
-    if(!obj){ return [false, false]; }
-    let isref = traverseObject(["$ref"], obj);
-    if(!isref){ return [obj, false]; }
-    let path = parseSchemaRef(isref);
-    obj = traverseObject(path, api_doc);
-    return [obj, path];
-}
-
-function getPathSchema(openapilink, code, requesttype){
-    let keys = ["paths", openapilink, requesttype, "responses", code];
-    let [schema, refkeys] = findSchema(keys, api_doc);
-    keys = ["content", "application/json", "schema","properties", "Response"];
-    [schema, refkeys] = findSchema(keys, schema);
-    return [schema, refkeys];
-    //find this schema as well, and return it. if it is a $ref (if not a $ref, it's in the same schema, so we just use those keys)
-}
+const formatter = require("./transform.js");
+const jsonguide = require("./json-schema-controller.js");
 
 function getXTypeHeaders(schema_obj){
     let keys = Object.keys(schema_obj);
@@ -48,14 +10,14 @@ function getXTypeHeaders(schema_obj){
         keys.forEach( (current) => {
             if(element == current)
                 results[element] = schema_obj[current];
-        })
+        });
     });
     return results;
 }
 
 function getXEnumReferences(data, xenumheader, returntype){
-    let keylist = parseSchemaRef(xenumheader["$ref"]);
-    let xenumschema = traverseObject(keylist, api_doc);
+    let keylist = jsonguide.parseSchemaRef(xenumheader["$ref"]);
+    let xenumschema = jsonguide.findSchema(keylist);
     if(!xenumschema)
         return data;
     for(let element of xenumschema["x-enum-values"]){
@@ -66,19 +28,19 @@ function getXEnumReferences(data, xenumheader, returntype){
     }
 }
 function getXMapped(data, xmapheader, definition){
-    let keys = parseSchemaRef(xmapheader["$ref"]);
+    let keys = jsonguide.parseSchemaRef(xmapheader["$ref"]);
     if(!keys){ return data; }
-    let defkeys = parseSchemaRef(keys[keys.length - 1], ".");
+    let defkeys = jsonguide.parseSchemaRef(keys[keys.length - 1], ".");
     defkeys = defkeys.slice(defkeys.length - 1);
     if(typeof data === "object"){
         if(data instanceof Array)
             return data; //Arrays of hashes are usually things like DestinySeasonDefinition, we don't want to map those.
-        Object.keys(data).forEach( (element) => { data[element].mapped = traverseObject([...defkeys, element], definition) });
+        Object.keys(data).forEach( (element) => { data[element].mapped = jsonguide.traverseObject([...defkeys, element], definition) });
     }
     else {
         return {
             id: data,
-            data: traverseObject([...defkeys, data], definition)
+            data: jsonguide.traverseObject([...defkeys, data], definition)
         }
     }
     return data; //return original by default
@@ -98,11 +60,11 @@ class DataMap {
         return true;
     }
     start(requestobj, data, config){
-        let [schema, refkeylocale] = getPathSchema(requestobj.link, requestobj.code, requestobj.type);
+        let [schema, refkeylocale] = jsonguide.findPathSchema(requestobj.link, requestobj.code, requestobj.type);
         if(config){ this.setConfig(config); }
-        refkeylocale.shift();
-        refkeylocale.shift();
-        return this.ProcessJSONLevel(data, schema, [{ property:refkeylocale[0] }]);
+        refkeylocale.shift(); // remove "components"
+        refkeylocale.shift(); // remove "schemas" (we want all locations to be relative to openapidoc["components"]["schemas"])
+        return this.ProcessJSONLevel(data, schema, [{ property: refkeylocale[0] }]);
     }
     SearchConfigParameter(keylist, schema, parameter, counter=0){
         //console.log("Checking "+counter+": "+keylist.toString());
@@ -143,29 +105,29 @@ class DataMap {
         return configlocation.map( (element) => { return element.property; });
     }
     transform(data, configlocation, xtypeheaders){
-        if(this.SearchConfigParameter(configlocation, this.config["components"]["schemas"], "condense")){
+        if(this.SearchConfigParameter(configlocation, this.config, "condense")){
             if(data.data){ return data.data; }
             if(data.items){ return data.items; }
         }
         if(xtypeheaders["x-mapped-definition"]){
-            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config["components"]["schemas"], "x-mapped-definition");
+            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config, "x-mapped-definition");
             if(shouldbemapped)
                 data = getXMapped(data, xtypeheaders["x-mapped-definition"], this.definition);
         }
         if(xtypeheaders["x-enum-reference"]){
             // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
-            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config["components"]["schemas"], "x-enum-values");
+            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config, "x-enum-values");
             //console.log("Found x-enum: "+shouldbemapped);
             data = getXEnumReferences(data, xtypeheaders["x-enum-reference"], shouldbemapped);
         }
         let directDataPath = this.getExactDataPath(configlocation);
         //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
-        let customoptions = traverseObject(directDataPath, this.config["components"]["schemas"]);
+        let customoptions = jsonguide.traverseObject(directDataPath, this.config);
         data = formatter(data, customoptions);
         return data;
     }
     getNextParts(searchkeylist, schema){
-        let [nextschema, refkeys] = findSchema(searchkeylist, schema);
+        let [nextschema, refkeys] = jsonguide.findSchema(searchkeylist, schema);
         let isref = false;
         if(refkeys){
             refkeys.shift();
@@ -176,7 +138,6 @@ class DataMap {
     }
     ProcessJSONLevel(data, schema, configlocation){
         let xtypeheaders = getXTypeHeaders(schema);
-        let result = {};
         switch(schema.type){
             case "object":
                 if(schema.properties){
@@ -229,28 +190,24 @@ class DataMap {
 const definitions = require("./manifest/en/world_content.json");
 const data = require("../env-files/profileData.json");
 let config_object = {
-    "components": {
-        "schemas": {
-            "condense": true,
-            "x-mapped-definition": true,
-            "x-enum-values": true,
-            "Destiny.Responses.DestinyProfileResponse": {
-                "profileInventory": {
-                    "x-enum-values": false,
-                },
-                "transform": function(data) {
-                    console.log("Made it here!");
-                    return data;
-                },
-            },
-            "Destiny.Entities.Items.DestinyItemComponent": {
-                
-            },
-            "SingleComponentResponseOfDestinyInventoryComponent": {
-                "x-mapped-definition": false
-            },
-        }
-    }
+    "condense": true,
+    "x-mapped-definition": true,
+    "x-enum-values": true,
+    "Destiny.Responses.DestinyProfileResponse": {
+        "profileInventory": {
+            "x-enum-values": false,
+        },
+        "transform": function(data) {
+            console.log("Made it here!");
+            return data;
+        },
+    },
+    "Destiny.Entities.Items.DestinyItemComponent": {
+        
+    },
+    "SingleComponentResponseOfDestinyInventoryComponent": {
+        "x-mapped-definition": false
+    },
 };
 request_object = {
     link: "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/",
