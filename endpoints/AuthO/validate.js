@@ -22,7 +22,7 @@ async function validateSession(sessionstore){
     if(!sessionstore.auth_data){
         if(!sessionstore.query_code)
             return Promise.reject({ error: "you have not given authorization to this API yet." });
-        await d2api.requestAccessToken(sessionstore.query_code)
+        await d2api.requestToken(true, sessionstore.query_code)
         .then( (result) => saveTokenData(sessionstore, result.data))
         .catch( (error) => d2api.bungieErrorResponse(error, "unable to process query code."));
     }
@@ -31,7 +31,7 @@ async function validateSession(sessionstore){
     if(Date.now() > access_expire){
         if(Date.now() > refresh_expire)
             return Promise.reject({error: "Refresh token expired, user will need to re-authenticate"});
-        await d2api.requestRefreshToken(sessionstore.auth_data.refresh_token)
+        await d2api.requestToken(false, sessionstore.auth_data.refresh_token)
         .then( (result) => saveTokenData(sessionstore, result.data))
         .catch( (error) => d2api.bungieErrorResponse(error, "Refresh token expired, user will need to re-authenticate"));
     }
