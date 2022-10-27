@@ -105,6 +105,7 @@ class DataMap {
         return configlocation.map( (element) => { return element.property; });
     }
     transform(data, configlocation, xtypeheaders){
+        let directDataPath = this.getExactDataPath(configlocation);
         if(this.SearchConfigParameter(configlocation, this.config, "condense")){
             if(data.data){ return data.data; }
             if(data.items){ return data.items; }
@@ -120,7 +121,6 @@ class DataMap {
             //console.log("Found x-enum: "+shouldbemapped);
             data = getXEnumReferences(data, xtypeheaders["x-enum-reference"], shouldbemapped);
         }
-        let directDataPath = this.getExactDataPath(configlocation);
         //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
         let customoptions = jsonguide.traverseObject(directDataPath, this.config);
         data = formatter(data, customoptions);
