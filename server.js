@@ -11,6 +11,7 @@ const express_session = require("express-session"); //connect-mongo requires thi
 const cors = require("@fastify/cors");
 //External functions
 const endpoints = require("./endpoints/endpoints.js"); // ...  @module
+const D2Plugin = require("./bungie-api/server-plugin.js");
 var trustProxy = false;
 var logger = true;
 var cookiestore = false;
@@ -113,6 +114,10 @@ if(process.env.ORIGIN){
         strictPreflight: true,
     });
 }
+
+//  register the d2 api and the data map as plugins
+//  both functions will be available on the request object.
+server_app.register(D2Plugin);
 
 //register all endpoints with this instance of fastify.
 server_app.register(endpoints.api_auth);
