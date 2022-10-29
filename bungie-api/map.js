@@ -17,7 +17,7 @@ function getXTypeHeaders(schema_obj){
 
 function getXEnumReferences(data, xenumheader, returntype){
     let keylist = jsonguide.parseSchemaRef(xenumheader["$ref"]);
-    let xenumschema = jsonguide.findSchema(keylist);
+    let xenumschema = jsonguide.findSchema(keylist)[0];
     if(!xenumschema)
         return data;
     for(let element of xenumschema["x-enum-values"]){
@@ -37,13 +37,8 @@ function getXMapped(data, xmapheader, definition){
             return data; //Arrays of hashes are usually things like DestinySeasonDefinition, we don't want to map those.
         Object.keys(data).forEach( (element) => { data[element].mapped = jsonguide.traverseObject([...defkeys, element], definition) });
     }
-    else {
-        return {
-            id: data,
-            data: jsonguide.traverseObject([...defkeys, data], definition)
-        }
-    }
-    return data; //return original by default
+    else 
+        return jsonguide.traverseObject([...defkeys, data], definition);
 }
 
 
@@ -53,6 +48,7 @@ class DataMap {
         this.config = {};
         if(!definition){ throw Error("A Bungie API Manifest is required."); }
         this.definition = definition;
+        this.xdictionarymap = {};
     }
     setConfig(configObj){
         if(!configObj){ throw Error("No config object was passed."); }
@@ -64,14 +60,13 @@ class DataMap {
         if(config){ this.setConfig(config); }
         refkeylocale.shift(); // remove "components"
         refkeylocale.shift(); // remove "schemas" (we want all locations to be relative to openapidoc["components"]["schemas"])
-        return this.ProcessJSONLevel(data, schema, [{ property: refkeylocale[0] }]);
+        let temp = this.ProcessJSONLevel(data, schema, [{ property: refkeylocale[0] }], []);
+        console.log(this.xdictionarymap);
+        return temp;
     }
     SearchConfigParameter(keylist, schema, parameter, counter=0){
-        //console.log("Checking "+counter+": "+keylist.toString());
         keylist = keylist.slice(0);
         if(schema == undefined){ return undefined; }
-        //console.log(keylist);
-        //console.log(schema);
         let validkeys = {};
         let keys = keylist.shift();
         for(let key in keys){
@@ -79,33 +74,28 @@ class DataMap {
             validkeys[key] = schema[keys[key]];
         }
         let validpaths = {};
-        //console.log(counter+": checking child paths: ");
         for(let key in validkeys){
             let temp = this.SearchConfigParameter(keylist, validkeys[key], parameter, counter+1);
             if(temp != undefined)
                 validpaths[key] = temp;
         }
-        //console.log(validpaths);
         if(Object.keys(validpaths).length == 0){
-            //console.log("There are no more valid paths, start checking recursively for the value.");
-            //console.log("return value: "+schema[parameter]);
             return schema[parameter];
         }
         else{
-            //console.log("A VALID PATH HAS BEEN FOUND SOMEWHERE BELOW "+counter);
-            //console.log(validpaths);
             if(validpaths["property"] != undefined){ return validpaths["property"]; }
             if(validpaths["ref"] != undefined){ return validpaths["ref"]; }
             if(validpaths["dependency"] != undefined){ return validpaths["dependency"]; }
-            //console.log("You lied to me.");
             return undefined;
         }
     }
-    getExactDataPath(configlocation){
-        return configlocation.map( (element) => { return element.property; });
+    addDictionaryMap(exactlocation){
+        let dictkey = exactlocation[ exactlocation.length - 1 ];
+        if(!this.xdictionarymap[dictkey]){ this.xdictionarymap[dictkey] = []; }
+        this.xdictionarymap[dictkey].push(exactlocation);
     }
-    transform(data, configlocation, xtypeheaders){
-        let directDataPath = this.getExactDataPath(configlocation);
+    transform(data, configlocation, datalocation, xtypeheaders){
+        let directDataPath = configlocation.map( (element) => { return element.property; });
         if(this.SearchConfigParameter(configlocation, this.config, "condense")){
             if(data.data){ return data.data; }
             if(data.items){ return data.items; }
@@ -123,71 +113,64 @@ class DataMap {
         }
         //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
         let customoptions = jsonguide.traverseObject(directDataPath, this.config);
-        data = formatter(data, customoptions);
+        //if(customoptions){ data = formatter(data, customoptions); }
         return data;
     }
-    getNextParts(searchkeylist, schema){
-        let [nextschema, refkeys] = jsonguide.findSchema(searchkeylist, schema);
-        let isref = false;
-        if(refkeys){
-            refkeys.shift();
-            refkeys.shift();
-            isref = refkeys[0];
-        }
-        return[ nextschema, isref ];
+    updateLocation(keylist, schema, configlocation, xtypeheaders, addNewProperty){
+        let nextlocation = [...configlocation];
+        let [nextschema, refkeys] = jsonguide.findSchema(keylist, schema);
+        if(refkeys)
+            refkeys = refkeys.pop();
+        if(addNewProperty){ nextlocation.push({ property: addNewProperty }); }
+        let location = nextlocation[ nextlocation.length - 1 ];
+        if(xtypeheaders["x-mapped-definition"]){ location.dependency = xtypeheaders["x-mapped-definition"]; }
+        if(refkeys){ location.ref = refkeys; }
+        return [ nextschema, nextlocation , refkeys];
     }
-    ProcessJSONLevel(data, schema, configlocation){
+    ProcessJSONLevel(data, schema, configlocation, datalocation){
         let xtypeheaders = getXTypeHeaders(schema);
         switch(schema.type){
             case "object":
                 if(schema.properties){
                     let result = {};
                     Object.keys(data).forEach( (property) => {
-                        let [nextschema, isref] = this.getNextParts(["properties", property], schema);
-                        let nextc = {};
-                        if(isref){ nextc.ref = isref }
-                        if(xtypeheaders["x-mapped-definition"]){ nextc.dependency = xtypeheaders["x-mapped-definition"]; }
-                        nextc.property = property;
-                        let nextconfiglocation = [...configlocation, nextc];
-                        if(!isref && !nextschema)
+                        let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["properties", property], schema, configlocation, xtypeheaders, property);
+                        if(!refkeys && !nextschema)
                             result[property] = data[property]; //item doesn't exist in openapi documentation, so just return as-is
                         else
-                            result[property] = this.ProcessJSONLevel(data[property], nextschema, nextconfiglocation);
+                            result[property] = this.ProcessJSONLevel(data[property], nextschema, nextlocation, [...datalocation, property]);
                     });
-                    return this.transform(result, configlocation, xtypeheaders);
+                    return this.transform(result, configlocation, datalocation, xtypeheaders);
                 }
                 else if(schema.additionalProperties){
-                    let [nextschema, isref] = this.getNextParts(["additionalProperties"], schema);
-                    if(isref){ configlocation[configlocation.length - 1].ref = isref; }
+                    let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["additionalProperties"], schema, configlocation, xtypeheaders, false);
                     let result = {};
-                    Object.keys(data).forEach( (property) => { 
-                        result[property] = this.ProcessJSONLevel(data[property], nextschema, configlocation);
+                    Object.keys(data).forEach( (property) => {
+                        result[property] = this.ProcessJSONLevel(data[property], nextschema, nextlocation, [...datalocation, property]);
                     });
-                    return this.transform(result, configlocation, xtypeheaders);
+                    return this.transform(result, configlocation, datalocation, xtypeheaders);
                 }
                 else if(schema.allOf){
-                    let [nextschema, isref] = this.getNextParts(["allOf", 0], schema);
-                    if(isref){ configlocation[configlocation.length - 1].ref = isref; }
-                    let result = this.ProcessJSONLevel(data, nextschema, configlocation);
-                    return this.transform(result, configlocation, xtypeheaders);
+                    let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["allOf", 0], schema, configlocation, xtypeheaders, false);
+                    let result = this.ProcessJSONLevel(data, nextschema, nextlocation, datalocation);
+                    return this.transform(result, configlocation, datalocation, xtypeheaders);
                 }
                 else
                     throw Error("This object has no properties, God help us all.");
             case "array": {
-                let [nextschema, isref] = this.getNextParts(["items"], schema);
-                if(isref){ configlocation[configlocation.length - 1].ref = isref; }
-                let result = [];
-                data.forEach( (current, index) => { result.push(this.ProcessJSONLevel(current, nextschema, configlocation)); });
-                return this.transform(result, configlocation, xtypeheaders);
+                let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["items"], schema, configlocation, xtypeheaders, false);
+                let result = data.map( (current, index) => {
+                    return this.ProcessJSONLevel(current, nextschema, nextlocation, [...datalocation, index]);
+                });
+                return this.transform(result, configlocation, datalocation, xtypeheaders);
             }
             default:
                 let result = data;
-                return this.transform(result, configlocation, xtypeheaders);
+                return this.transform(result, configlocation, datalocation, xtypeheaders);
         }
     }
 }
-
-const definitions = require("./manifest/en/world_content.json");
+const definitions = require("./manifest/en/manifest.json");
 const data = require("../env-files/profileData.json");
 let config_object = {
     "condense": true,
