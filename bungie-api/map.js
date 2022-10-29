@@ -2,6 +2,7 @@ const xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-v
 const formatter = require("./transform.js");
 const jsonguide = require("./json-schema-controller.js");
 
+
 function getXTypeHeaders(schema_obj){
     let keys = Object.keys(schema_obj);
     let results = {};
@@ -27,20 +28,6 @@ function getXEnumReferences(data, xenumheader, returntype){
         }
     }
 }
-function getXMapped(data, xmapheader, definition){
-    let keys = jsonguide.parseSchemaRef(xmapheader["$ref"]);
-    if(!keys){ return data; }
-    let defkeys = jsonguide.parseSchemaRef(keys[keys.length - 1], ".");
-    defkeys = defkeys.slice(defkeys.length - 1);
-    if(typeof data === "object"){
-        if(data instanceof Array)
-            return data; //Arrays of hashes are usually things like DestinySeasonDefinition, we don't want to map those.
-        Object.keys(data).forEach( (element) => { data[element].mapped = jsonguide.traverseObject([...defkeys, element], definition) });
-    }
-    else 
-        return jsonguide.traverseObject([...defkeys, data], definition);
-}
-
 
 
 class DataMap {
@@ -63,6 +50,33 @@ class DataMap {
         let temp = this.ProcessJSONLevel(data, schema, [{ property: refkeylocale[0] }], []);
         console.log(this.xdictionarymap);
         return temp;
+    }
+    #XMappedDefinition(data, xmapheader, configlocation, datalocation){
+        let keys = jsonguide.parseSchemaRef(xmapheader["$ref"]);
+        if(!keys){ return data; }
+        let defkeys = jsonguide.parseSchemaRef(keys[keys.length - 1], ".");
+        defkeys = defkeys.slice(defkeys.length - 1);
+        if(typeof data === "object"){
+            if(data instanceof Array)
+                return data; //Arrays of hashes are usually things like DestinySeasonDefinition, we don't want to map those.
+            Object.keys(data).forEach( (element) => { data[element].mapped = jsonguide.traverseObject([...defkeys, element], this.definition) });
+        }
+        else {
+            let schemapath = configlocation.map( (element) => { return element.property; });
+            schemapath.pop(); //remove the item name, list will point to items parent in config object.
+            let temp = [...datalocation];
+            let name = temp.pop()+"Mapped";
+            let location = temp.pop();
+            var parent = this.config;
+            for(let key of schemapath){
+                if(parent[key] == undefined){ parent[key] = {}; }
+                parent = parent[key];
+            }
+            if(parent.append == undefined){ parent.append = []; }
+            parent.append.push([ location, name, jsonguide.traverseObject([...defkeys, data], this.definition) ]);
+        }
+        return data;
+        
     }
     SearchConfigParameter(keylist, schema, parameter, counter=0){
         keylist = keylist.slice(0);
@@ -103,7 +117,7 @@ class DataMap {
         if(xtypeheaders["x-mapped-definition"]){
             let shouldbemapped = this.SearchConfigParameter(configlocation, this.config, "x-mapped-definition");
             if(shouldbemapped)
-                data = getXMapped(data, xtypeheaders["x-mapped-definition"], this.definition);
+                data = this.#XMappedDefinition(data, xtypeheaders["x-mapped-definition"], configlocation, datalocation);
         }
         if(xtypeheaders["x-enum-reference"]){
             // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
@@ -113,7 +127,8 @@ class DataMap {
         }
         //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
         let customoptions = jsonguide.traverseObject(directDataPath, this.config);
-        //if(customoptions){ data = formatter(data, customoptions); }
+        if(customoptions)
+            data = formatter(data, customoptions); 
         return data;
     }
     updateLocation(keylist, schema, configlocation, xtypeheaders, addNewProperty){
@@ -153,11 +168,12 @@ class DataMap {
                 else if(schema.allOf){
                     let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["allOf", 0], schema, configlocation, xtypeheaders, false);
                     let result = this.ProcessJSONLevel(data, nextschema, nextlocation, datalocation);
-                    return this.transform(result, configlocation, datalocation, xtypeheaders);
+                    return this.transform(result, configlocation, datalocation, xtypeheaders, datalocation);
                 }
                 else
                     throw Error("This object has no properties, God help us all.");
             case "array": {
+                console.log(schema.type);
                 let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["items"], schema, configlocation, xtypeheaders, false);
                 let result = data.map( (current, index) => {
                     return this.ProcessJSONLevel(current, nextschema, nextlocation, [...datalocation, index]);
