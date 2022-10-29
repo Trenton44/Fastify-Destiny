@@ -1,11 +1,12 @@
 
 function FormatFromConfig(data, options){
+    /*
     if(customoptions["reduce"]){
         data = ReduceObject(data, customoptions["reduce"]);
-    }
-    if(customoptions["append"]){
-        data = AppendToObject(data, customoptions["append"]);
-    }
+    }*/
+    if(options["append"]){
+        data = AppendToObject(data, options["append"]);
+    }/*
     if(customoptions["filter"]){
         data = FilterByKeyValue(data, customoptions["filter"]);
     }
@@ -20,7 +21,7 @@ function FormatFromConfig(data, options){
     }
     if(customoptions["group"]){
         data = GroupObjectToKey(data, customoptions["group"]);
-    }
+    }*/
     return data;
 }
 
@@ -79,10 +80,9 @@ function FilterByKeyValue(data, options){
 }
 function AppendToObject(data, appendlist){
     //TODO: verify input data is an object.
-    //appendlist is an array, items in array structured as [key, value] (key the data is to be placed in, data being the data to append.)
-    for(let item of appendlist){
-        data[item[0]] = item[1];
-    }
+    //appendlist is an array, items in array structured as [location, key, value] (key the data is to be placed in, data being the data to append.)
+    for(let item of appendlist)
+        data[item[1]] = item[2];
     return data;
 }
 function CombineBySimilarKeys(data){ 
@@ -120,5 +120,59 @@ function AttachObjectByKeyValue(data, options){ //options should be structured a
     return data; 
 }
 
- 
+//  should be an object, format { groupkey: [ keys to be grouped ]}
+function RegroupObjects(data, options){
+    let result = {};
+    for(let groupkey in options){
+        let group = options[groupkey];
+        result[groupkey] = {};
+        for(let item of group){
+            if(data[item]){
+                result[groupkey][item] = data[item];
+                delete data[item];
+            }
+        }
+    }
+
+    for(let key in data)
+        result[key] = data[key];
+    return data;
+}
+
+function FilterArray(data, options){
+    if(!(data instanceof Array))
+        return data;
+    //options should be single keyvalue
+    let key = Object.keys(options)[0];
+    let value = options[key];
+    for(let item of data){
+        if(item[key] !== value)
+            delete item;
+    }
+    return data;
+}
+
+function ReduceObject(data, options){
+    if(!(data instanceof Object))
+        return data;
+    if(data instanceof Array)
+        return data;
+    for(let key in data){
+        if(options.find((element) => element == key) == undefined)
+            delete data[key];
+    }
+    return data;
+}
+
+function appendObject(data, options){
+    for(let item of options)
+        data[item[0]] = item[1];
+    return data;
+}
+
+
+
 module.exports = FormatFromConfig;
+
+
+
