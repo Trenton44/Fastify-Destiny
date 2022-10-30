@@ -48,7 +48,6 @@ class DataMap {
         refkeylocale.shift(); // remove "components"
         refkeylocale.shift(); // remove "schemas" (we want all locations to be relative to openapidoc["components"]["schemas"])
         let temp = this.ProcessJSONLevel(data, schema, [{ property: refkeylocale[0] }], []);
-        console.log(this.xdictionarymap);
         return temp;
     }
     #XMappedDefinition(data, xmapheader, configlocation, datalocation){
@@ -103,11 +102,31 @@ class DataMap {
             return undefined;
         }
     }
-    addDictionaryMap(exactlocation){
+    /*addDictionaryMap(exactlocation, configlocation){
         let dictkey = exactlocation[ exactlocation.length - 1 ];
-        if(!this.xdictionarymap[dictkey]){ this.xdictionarymap[dictkey] = []; }
-        this.xdictionarymap[dictkey].push(exactlocation);
-    }
+        let toplevelconfig = configlocation[0].property;
+        if(!this.config[toplevelconfig]){ this.config[toplevelconfig] = {}; }
+        if(!this.config[toplevelconfig].DictCombine){ this.config[toplevelconfig].DictCombine = {}; }
+        if(!this.config[toplevelconfig].DictCombine[dictkey]){ 
+            console.log("new dict key found, creating object.");
+            this.config[toplevelconfig].DictCombine[dictkey] = [];
+            this.config[toplevelconfig].DictCombine[dictkey].push(exactlocation);
+        }
+        else{
+            console.log("Comparing new addition: "+exactlocation);
+            console.log("To first addition: "+this.config[toplevelconfig].DictCombine[dictkey][0]);
+            if(JSON.stringify(this.config[toplevelconfig].DictCombine[dictkey][0]) !== JSON.stringify(exactlocation))
+                console.log("they do not match up, do not add this to the list.");
+            else{
+                console.log("They match up, appending.");
+                this.config[toplevelconfig].DictCombine[dictkey].push(exactlocation);
+            }
+        }
+        return true;
+        //should probably change this to check paths up to the dict key, and only put them under
+        // the same spot if that part of the path matches up (to prevent gropuing of character stats)
+        
+    }*/
     transform(data, configlocation, datalocation, xtypeheaders){
         let directDataPath = configlocation.map( (element) => { return element.property; });
         if(this.SearchConfigParameter(configlocation, this.config, "condense")){
@@ -122,7 +141,6 @@ class DataMap {
         if(xtypeheaders["x-enum-reference"]){
             // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
             let shouldbemapped = this.SearchConfigParameter(configlocation, this.config, "x-enum-values");
-            //console.log("Found x-enum: "+shouldbemapped);
             data = getXEnumReferences(data, xtypeheaders["x-enum-reference"], shouldbemapped);
         }
         //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
@@ -161,6 +179,7 @@ class DataMap {
                     let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["additionalProperties"], schema, configlocation, xtypeheaders, false);
                     let result = {};
                     Object.keys(data).forEach( (property) => {
+                        //if(xtypeheaders["x-dictionary-key"]){ this.addDictionaryMap([...datalocation, property], nextlocation); }
                         result[property] = this.ProcessJSONLevel(data[property], nextschema, nextlocation, [...datalocation, property]);
                     });
                     return this.transform(result, configlocation, datalocation, xtypeheaders);
@@ -173,7 +192,6 @@ class DataMap {
                 else
                     throw Error("This object has no properties, God help us all.");
             case "array": {
-                console.log(schema.type);
                 let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["items"], schema, configlocation, xtypeheaders, false);
                 let result = data.map( (current, index) => {
                     return this.ProcessJSONLevel(current, nextschema, nextlocation, [...datalocation, index]);
