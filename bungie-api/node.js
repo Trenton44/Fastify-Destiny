@@ -15,6 +15,8 @@ class NodeController {
             throw Error("Unexpected: Node does not have parent.");
         let parent = node.parent;
         let children = node.children;
+        for(let child of children)
+            child.parent = parent;
         parent.children = [...parent.children, ...children];
         node = null;
     }
@@ -34,10 +36,13 @@ class Node {
         this.options = this.parseConfig(config);
         this.definition = definition;
         this.data = undefined;
+        this.isdictkey = false;
         this.children = [];
     }
     addChild(key, schema, config, definition){
         let childnode = new Node(this, key, schema, config, definition);
+        if(this.schema["x-dictionary-key"])
+            childnode.isdictkey = true;
         this.children.push(childnode);
         return childnode;
     }
@@ -70,7 +75,6 @@ class Node {
         return options;
     }
     printChildren(){
-        console.log(this.config);
         console.log("Key: "+this.key);
         console.log("This options: ");
         console.log(this.options);
@@ -121,6 +125,24 @@ class Node {
             }
         }
     }
+    FlipChildren(){}
+    RegroupObjects(options){
+        for(let groupkey in options){
+            let groupNode = new Node(this, groupkey, false, false, false);
+            for(let key of options[groupkey]){
+                console.log("key: "+key);
+                for(let i in this.children){
+                    let child = this.children[i];
+                    if(child.key == key){
+                        let temp = child;
+                        groupNode.children.push(temp);
+                        this.children.splice(i, 1);
+                    }
+                }
+            }
+            this.children.push(groupNode);
+        }
+    }
     transform(){
         if(this.schema["x-mapped-definition"] && this.options["x-mapped-definition"])
             this.GetXMappedDefinition();
@@ -128,8 +150,9 @@ class Node {
             this.GetXEnumReference();
         if(this.options["filter"])
             this.filterNodes(this.options["filter"]);
-        
-        
+        //[ "reduce", "filter", "attach", "combine", "group" ];
+        if(this.options["group"])
+            this.RegroupObjects(this.options["group"]);
     }
     compileData(){
         if(this.data == undefined){
@@ -139,7 +162,7 @@ class Node {
             this.transform();
             for(let child of this.children)
                 this.data[child.key] = child.data;
-                return this.data;
+            return this.data;
         }
         else{
             this.transform();
@@ -152,6 +175,8 @@ class Node {
             for(let key of keylist){
                 if(child.key == key){
                     let child_children = child.children;
+                    for(let kid of child_children)
+                        kid.parent = this; //replace old parent with this node
                     this.children.splice(i, 1, ...child_children); //remove the node with key, and replace it with it's children
                     this.pruneTree(keylist); // new child has been appended, run again so it can be checked too
                 }

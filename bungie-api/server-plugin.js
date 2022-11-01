@@ -15,4 +15,4 @@ async function myPlugin (app) {
   });
 }
 
-module.exports = fp(myPlugin)
+module.exports = fp(myPlugin);
