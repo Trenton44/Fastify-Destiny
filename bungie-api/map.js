@@ -1,226 +1,107 @@
-const xtypeheaders = ["x-mapped-definition", "x-mobile-manifest-name", "x-enum-values", "x-destiny-component-type-dependency", "x-dictionary-key", "x-preview", "x-enum-reference"];
-const formatter = require("./transform.js");
-const jsonguide = require("./json-schema-controller.js");
-
-
-function getXTypeHeaders(schema_obj){
-    let keys = Object.keys(schema_obj);
-    let results = {};
-    xtypeheaders.forEach( (element) => {
-        results[element] = false;
-        keys.forEach( (current) => {
-            if(element == current)
-                results[element] = schema_obj[current];
-        });
-    });
-    return results;
-}
-
-function getXEnumReferences(data, xenumheader, returntype){
-    let keylist = jsonguide.parseSchemaRef(xenumheader["$ref"]);
-    let xenumschema = jsonguide.findSchema(keylist)[0];
-    if(!xenumschema)
-        return data;
-    for(let element of xenumschema["x-enum-values"]){
-        if(element.numericValue == data){
-            if(returntype){ return element.identifier; }
-            else{ return element.numericValue; }
-        }
-    }
-}
-
+const guide = require("./json-schema-controller.js");
+const NodeController = require("./node.js").NodeController;
+const Node = require("./node.js").Node;
 
 class DataMap {
-    constructor(definition){
+    constructor(manifest){
         this.config = {};
-        if(!definition){ throw Error("A Bungie API Manifest is required."); }
-        this.definition = definition;
-        this.xdictionarymap = {};
+        this.nodes = new NodeController(this.config);
+        this.defintion = manifest;
     }
-    setConfig(configObj){
-        if(!configObj){ throw Error("No config object was passed."); }
-        this.config = configObj;
-        return true;
+    setConfig(config){
+        this.config = config;
+        this.nodes.config = config;
     }
-    start(requestobj, data, config){
-        let [schema, refkeylocale] = jsonguide.findPathSchema(requestobj.link, requestobj.code, requestobj.type);
-        if(config){ this.setConfig(config); }
-        refkeylocale.shift(); // remove "components"
-        refkeylocale.shift(); // remove "schemas" (we want all locations to be relative to openapidoc["components"]["schemas"])
-        let temp = this.ProcessJSONLevel(data, schema, [{ property: refkeylocale[0] }], []);
-        return temp;
+    start(request, data, config){
+        this.setConfig(config);
+        let [schema, refkeylocale] = guide.findPathSchema(request.link, request.code, request.type);
+        refkeylocale = refkeylocale.pop();
+        this.nodes.root = new Node(null, refkeylocale, schema, { ref: this.config[refkeylocale] });
+        this.ProcessJSONLevel(data, schema, this.config[refkeylocale], this.nodes.root);
+        //this.nodes.root.printChildren();
+        let result = this.recompile();
+        return result;
     }
-    #XMappedDefinition(data, xmapheader, configlocation, datalocation){
-        let keys = jsonguide.parseSchemaRef(xmapheader["$ref"]);
-        if(!keys){ return data; }
-        let defkeys = jsonguide.parseSchemaRef(keys[keys.length - 1], ".");
-        defkeys = defkeys.slice(defkeys.length - 1);
-        if(typeof data === "object"){
-            if(data instanceof Array)
-                return data; //Arrays of hashes are usually things like DestinySeasonDefinition, we don't want to map those.
-            Object.keys(data).forEach( (element) => { data[element].mapped = jsonguide.traverseObject([...defkeys, element], this.definition) });
+    buildConfig(config, ref=false, dependency=false){
+        if(ref){
+            ref = ref.pop(); //just get the part relevant to components.schemas
+            ref = guide.traverseObject([ref], this.config);
         }
-        else {
-            let schemapath = configlocation.map( (element) => { return element.property; });
-            schemapath.pop(); //remove the item name, list will point to items parent in config object.
-            let temp = [...datalocation];
-            let name = temp.pop()+"Mapped";
-            let location = temp.pop();
-            var parent = this.config;
-            for(let key of schemapath){
-                if(parent[key] == undefined){ parent[key] = {}; }
-                parent = parent[key];
-            }
-            if(parent.append == undefined){ parent.append = []; }
-            parent.append.push([ location, name, jsonguide.traverseObject([...defkeys, data], this.definition) ]);
-        }
-        return data;
-        
+        if(dependency)
+            dependency = guide.traverseObject(dependency, this.config);
+        return {
+            property: config,
+            ref: ref,
+            dependency: dependency
+        };
     }
-    SearchConfigParameter(keylist, schema, parameter, counter=0){
-        keylist = keylist.slice(0);
-        if(schema == undefined){ return undefined; }
-        let validkeys = {};
-        let keys = keylist.shift();
-        for(let key in keys){
-            if(schema[keys[key]] != undefined)
-            validkeys[key] = schema[keys[key]];
-        }
-        let validpaths = {};
-        for(let key in validkeys){
-            let temp = this.SearchConfigParameter(keylist, validkeys[key], parameter, counter+1);
-            if(temp != undefined)
-                validpaths[key] = temp;
-        }
-        if(Object.keys(validpaths).length == 0){
-            return schema[parameter];
-        }
-        else{
-            if(validpaths["property"] != undefined){ return validpaths["property"]; }
-            if(validpaths["ref"] != undefined){ return validpaths["ref"]; }
-            if(validpaths["dependency"] != undefined){ return validpaths["dependency"]; }
-            return undefined;
-        }
-    }
-    /*addDictionaryMap(exactlocation, configlocation){
-        let dictkey = exactlocation[ exactlocation.length - 1 ];
-        let toplevelconfig = configlocation[0].property;
-        if(!this.config[toplevelconfig]){ this.config[toplevelconfig] = {}; }
-        if(!this.config[toplevelconfig].DictCombine){ this.config[toplevelconfig].DictCombine = {}; }
-        if(!this.config[toplevelconfig].DictCombine[dictkey]){ 
-            console.log("new dict key found, creating object.");
-            this.config[toplevelconfig].DictCombine[dictkey] = [];
-            this.config[toplevelconfig].DictCombine[dictkey].push(exactlocation);
-        }
-        else{
-            console.log("Comparing new addition: "+exactlocation);
-            console.log("To first addition: "+this.config[toplevelconfig].DictCombine[dictkey][0]);
-            if(JSON.stringify(this.config[toplevelconfig].DictCombine[dictkey][0]) !== JSON.stringify(exactlocation))
-                console.log("they do not match up, do not add this to the list.");
-            else{
-                console.log("They match up, appending.");
-                this.config[toplevelconfig].DictCombine[dictkey].push(exactlocation);
-            }
-        }
-        return true;
-        //should probably change this to check paths up to the dict key, and only put them under
-        // the same spot if that part of the path matches up (to prevent gropuing of character stats)
-        
-    }*/
-    transform(data, configlocation, datalocation, xtypeheaders){
-        let directDataPath = configlocation.map( (element) => { return element.property; });
-        if(this.SearchConfigParameter(configlocation, this.config, "condense")){
-            if(data.data){ return data.data; }
-            if(data.items){ return data.items; }
-        }
-        if(xtypeheaders["x-mapped-definition"]){
-            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config, "x-mapped-definition");
-            if(shouldbemapped)
-                data = this.#XMappedDefinition(data, xtypeheaders["x-mapped-definition"], configlocation, datalocation);
-        }
-        if(xtypeheaders["x-enum-reference"]){
-            // Do reverse search here too. This will also be true/false, true returns identifier, false returns numericValue. default to false
-            let shouldbemapped = this.SearchConfigParameter(configlocation, this.config, "x-enum-values");
-            data = getXEnumReferences(data, xtypeheaders["x-enum-reference"], shouldbemapped);
-        }
-        //This one doesn't use SearchConfigParameter because we only want to look for transform in this config
-        let customoptions = jsonguide.traverseObject(directDataPath, this.config);
-        if(customoptions)
-            data = formatter(data, customoptions); 
-        return data;
-    }
-    updateLocation(keylist, schema, configlocation, xtypeheaders, addNewProperty){
-        let nextlocation = [...configlocation];
-        let [nextschema, refkeys] = jsonguide.findSchema(keylist, schema);
-        if(refkeys)
-            refkeys = refkeys.pop();
-        if(addNewProperty){ nextlocation.push({ property: addNewProperty }); }
-        let location = nextlocation[ nextlocation.length - 1 ];
-        if(xtypeheaders["x-mapped-definition"]){ location.dependency = xtypeheaders["x-mapped-definition"]; }
-        if(refkeys){ location.ref = refkeys; }
-        return [ nextschema, nextlocation , refkeys];
-    }
-    ProcessJSONLevel(data, schema, configlocation, datalocation){
-        let xtypeheaders = getXTypeHeaders(schema);
+    ProcessJSONLevel(data, schema, config, node){
         switch(schema.type){
-            case "object":
+            case "object": {
                 if(schema.properties){
-                    let result = {};
                     Object.keys(data).forEach( (property) => {
-                        let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["properties", property], schema, configlocation, xtypeheaders, property);
-                        if(!refkeys && !nextschema)
-                            result[property] = data[property]; //item doesn't exist in openapi documentation, so just return as-is
-                        else
-                            result[property] = this.ProcessJSONLevel(data[property], nextschema, nextlocation, [...datalocation, property]);
+                        let [ nodeschema, schemaref ] = guide.findSchema(["properties", property], schema);
+                        if(!schemaref && !nodeschema){
+                            let temp = node.addChild(property, false, false, this.defintion);
+                            temp.data = data[property];
+                            return false;
+                        }
+                        let nodeconfig = this.buildConfig(guide.traverseObject([ property ], config), schemaref);
+                        let nextnode = node.addChild(property, nodeschema, nodeconfig, this.defintion);
+                        this.ProcessJSONLevel(data[property], nodeschema, nodeconfig.property, nextnode);
                     });
-                    return this.transform(result, configlocation, datalocation, xtypeheaders);
                 }
                 else if(schema.additionalProperties){
-                    let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["additionalProperties"], schema, configlocation, xtypeheaders, false);
-                    let result = {};
+                    let [ nodeschema, schemaref ] = guide.findSchema(["additionalProperties"], schema);
                     Object.keys(data).forEach( (property) => {
-                        //if(xtypeheaders["x-dictionary-key"]){ this.addDictionaryMap([...datalocation, property], nextlocation); }
-                        result[property] = this.ProcessJSONLevel(data[property], nextschema, nextlocation, [...datalocation, property]);
+                        let nodeconfig = this.buildConfig(guide.traverseObject([ property ], config), schemaref);
+                        let nextnode = node.addChild(property, nodeschema, nodeconfig, this.defintion);
+                        this.ProcessJSONLevel(data[property], nodeschema, nodeconfig.property, nextnode);
                     });
-                    return this.transform(result, configlocation, datalocation, xtypeheaders);
                 }
-                else if(schema.allOf){
-                    let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["allOf", 0], schema, configlocation, xtypeheaders, false);
-                    let result = this.ProcessJSONLevel(data, nextschema, nextlocation, datalocation);
-                    return this.transform(result, configlocation, datalocation, xtypeheaders, datalocation);
+                else if (schema.allOf){
+                    let [ nodeschema, schemaref ] = guide.findSchema(["allOf", 0], schema);
+                    //  may need to come back and add schemaref/allOf to the config here
+                    this.ProcessJSONLevel(data, nodeschema, config, node);
                 }
-                else
-                    throw Error("This object has no properties, God help us all.");
-            case "array": {
-                let [ nextschema, nextlocation, refkeys ] = this.updateLocation(["items"], schema, configlocation, xtypeheaders, false);
-                let result = data.map( (current, index) => {
-                    return this.ProcessJSONLevel(current, nextschema, nextlocation, [...datalocation, index]);
-                });
-                return this.transform(result, configlocation, datalocation, xtypeheaders);
+                else{ throw Error("This object has no properties, God help us all."); }
+                return true;
             }
-            default:
-                let result = data;
-                return this.transform(result, configlocation, datalocation, xtypeheaders);
+            case "array": {
+                let [ nodeschema, schemaref ] = guide.findSchema(["items"], schema);
+                //  may need to come back and add items to the config here
+                let nodeconfig = this.buildConfig(guide.traverseObject(["items"], config), schemaref);
+                data.forEach( (current, index) => {
+                    let nextnode = node.addChild(index, nodeschema, nodeconfig, this.defintion);
+                    this.ProcessJSONLevel(current, nodeschema, nodeconfig.property, nextnode);
+                });
+                return true;
+            }
+            default: {
+                node.data = data;
+                return true;
+            }
         }
     }
+    recompile(){
+        return this.nodes.compileNodeTree();
+    }
 }
+
+/*
 const definitions = require("./manifest/en/manifest.json");
 const data = require("../env-files/profileData.json");
 let config_object = {
     "condense": true,
-    "x-mapped-definition": true,
-    "x-enum-values": true,
     "Destiny.Responses.DestinyProfileResponse": {
-        "profileInventory": {
-            "x-enum-values": false,
-        },
+        "x-mapped-definition": true,
+        "x-enum-values": true,
         "transform": function(data) {
-            console.log("Made it here!");
             return data;
         },
     },
-    "Destiny.Entities.Items.DestinyItemComponent": {
-        
+    "Destiny.Entities.Items.DestinyItemComponent": { 
+        "filter": ["itemHash", "bucketHash", "itemHashMapped", "bucketHashMapped"]
     },
     "SingleComponentResponseOfDestinyInventoryComponent": {
         "x-mapped-definition": false
@@ -231,10 +112,14 @@ request_object = {
     type: "get",
     code: "200",
 };
+
 let map = new DataMap(definitions);
-let result = map.start(request_object, data, config_object);
-let test = JSON.stringify(result);
+map.start(request_object, data, config_object);
+let result = map.recompile();
 const fs = require('fs');
-fs.writeFile("map.json", test, (err) => console.log("success!"));
+fs.writeFile("nodemap.json", JSON.stringify(result), (err) => console.log("success!"));
+//console.log(result);
+*/
+
 
 module.exports = DataMap;
