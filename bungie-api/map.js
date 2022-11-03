@@ -1,6 +1,6 @@
 const guide = require("./json-schema-controller.js");
-const NodeController = require("./node.js").NodeController;
-const Node = require("./node.js").Node;
+const NodeController = require("./nodecontroller.js");
+const Node = require("./node.js");
 
 class DataMap {
     constructor(manifest){
@@ -18,8 +18,7 @@ class DataMap {
         refkeylocale = refkeylocale.pop();
         this.nodes.root = new Node(null, refkeylocale, schema, { ref: this.config[refkeylocale] });
         this.ProcessJSONLevel(data, schema, this.config[refkeylocale], this.nodes.root);
-        //this.nodes.root.printChildren();
-        let result = this.recompile();
+        let result = this.nodes.compileTree();
         return result;
     }
     buildConfig(config, ref=false, dependency=false){
@@ -42,12 +41,14 @@ class DataMap {
                     Object.keys(data).forEach( (property) => {
                         let [ nodeschema, schemaref ] = guide.findSchema(["properties", property], schema);
                         if(!schemaref && !nodeschema){
-                            let temp = node.addChild(property, false, false, this.defintion);
+                            let nextnode = new Node(null, property, false, false, this.defintion)
+                            this.nodes.addNode(node, nextnode);
                             temp.data = data[property];
                             return false;
                         }
                         let nodeconfig = this.buildConfig(guide.traverseObject([ property ], config), schemaref);
-                        let nextnode = node.addChild(property, nodeschema, nodeconfig, this.defintion);
+                        let nextnode = new Node(null, property, nodeschema, nodeconfig, this.defintion);
+                        this.nodes.addNode(node, nextnode);
                         this.ProcessJSONLevel(data[property], nodeschema, nodeconfig.property, nextnode);
                     });
                 }
@@ -55,7 +56,8 @@ class DataMap {
                     let [ nodeschema, schemaref ] = guide.findSchema(["additionalProperties"], schema);
                     Object.keys(data).forEach( (property) => {
                         let nodeconfig = this.buildConfig(guide.traverseObject([ property ], config), schemaref);
-                        let nextnode = node.addChild(property, nodeschema, nodeconfig, this.defintion);
+                        let nextnode = new Node(null, property, nodeschema, nodeconfig, this.defintion);
+                        this.nodes.addNode(node, nextnode);
                         this.ProcessJSONLevel(data[property], nodeschema, nodeconfig.property, nextnode);
                     });
                 }
@@ -72,7 +74,8 @@ class DataMap {
                 //  may need to come back and add items to the config here
                 let nodeconfig = this.buildConfig(guide.traverseObject(["items"], config), schemaref);
                 data.forEach( (current, index) => {
-                    let nextnode = node.addChild(index, nodeschema, nodeconfig, this.defintion);
+                    let nextnode = new Node(null, index, nodeschema, nodeconfig, this.defintion);
+                    this.nodes.addNode(node, nextnode);
                     this.ProcessJSONLevel(current, nodeschema, nodeconfig.property, nextnode);
                 });
                 return true;
@@ -82,9 +85,6 @@ class DataMap {
                 return true;
             }
         }
-    }
-    recompile(){
-        return this.nodes.compileNodeTree();
     }
 }
 
@@ -99,6 +99,10 @@ let config_object = {
         "transform": function(data) {
             return data;
         },
+        "group": {
+            "characterdata": ["characters", "characterInventories", "characterProgressions", "characterRenderData", "characterActivities", "characterEquipment", "characterKiosks", "characterPlugSets", "characterPresentationNodes", "characterRecords", "characterCollectibles", "characterStringVariables", "characterCraftables", "characterCurrencyLookups"],
+            "profiledata": ["profileInventory", "profileCurrencies", "profile", "platformSilver", "profileKiosks", "profilePlugSets", "profileProgression", "profilePresentationNodes", "profileRecords", "profileCollectibles", "profileTransitoryData", "profileStringVariables"]
+        }
     },
     "Destiny.Entities.Items.DestinyItemComponent": { 
         "filter": ["itemHash", "bucketHash", "itemHashMapped", "bucketHashMapped"]
@@ -120,6 +124,4 @@ const fs = require('fs');
 fs.writeFile("nodemap.json", JSON.stringify(result), (err) => console.log("success!"));
 //console.log(result);
 */
-
-
 module.exports = DataMap;
