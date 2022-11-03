@@ -2,51 +2,19 @@ const guide = require("./json-schema-controller.js");
 const inheritable = [ "x-mapped-definition", "x-enum-values" ];
 const uninheritable = [ "reduce", "filter", "attach", "combine", "group" ];
 
-class NodeController {
-    constructor(config){
-        //  hierarchy is effectively a copy of the openapi schema, at initial creation.
-        //  it then may deviate based on user config, and this is to act as a new "schema" that maintains those changes
-        this.hierarchy = {};
-        this.root = null;
-        this.config = config;
-    }
-    removeNode(node){
-        if(!node.parent)
-            throw Error("Unexpected: Node does not have parent.");
-        let parent = node.parent;
-        let children = node.children;
-        for(let child of children)
-            child.parent = parent;
-        parent.children = [...parent.children, ...children];
-        node = null;
-    }
-    compileNodeTree(){
-        if(this.config.condense)
-            this.root.pruneTree(["data", "items"]);
-        return this.root.compileData();
-    }
-}
-
 class Node {
     constructor(parent, key, schema, config, definition){
         this.parent = parent;
         this.key = key;
         this.schema = schema;
         this.config = config;
-        this.options = this.parseConfig(config);
+        this.options = this.#parseConfig(config);
         this.definition = definition;
         this.data = undefined;
         this.isdictkey = false;
         this.children = [];
     }
-    addChild(key, schema, config, definition){
-        let childnode = new Node(this, key, schema, config, definition);
-        if(this.schema["x-dictionary-key"])
-            childnode.isdictkey = true;
-        this.children.push(childnode);
-        return childnode;
-    }
-    enforceOptionPriority(key, config){
+    #enforceOptionPriority(key, config){
         let option = undefined;
         if(config.dependency && config.dependency[key] != undefined)
             option = config.dependency[key];
@@ -56,135 +24,100 @@ class Node {
             option = config.property[key]; // override ref if it exists
         return option;
     }
-    parseConfig(config){
+    #parseConfig(config){
         let options = {};
-        for(let key of uninheritable){
-            options[key] = this.enforceOptionPriority(key, config);
+        uninheritable.forEach( (key) => { 
+            options[key] = this.#enforceOptionPriority(key, config);
             if(options[key] == undefined){ options[key] = false; } //if nothing is found, default to false
-        }
-        for(let key of inheritable){
-            options[key] = this.enforceOptionPriority(key, config);
-            // if undefined, the schemas for this node don't have it. 
-            // it's parent would have the most recently inherited value, pull from it
-            if(options[key] == undefined){
-                if(this.parent);
-                    options[key] = this.parent.options[key];
-            }
-            
-        }
-        return options;
+        });
+        inheritable.forEach( (key) => {
+            options[key] = this.#enforceOptionPriority(key, config);
+            if(options[key] != undefined)
+                return;
+            if(this.parent){ options[key] = this.parent.options[key]; }
+        });
     }
-    printChildren(){
-        console.log("Key: "+this.key);
-        console.log("This options: ");
-        console.log(this.options);
-        console.log("Data: "+this.data);
-        console.log("Children: ");
-        for(let child of this.children)
-            child.printChildren();
-    }
-    appendData(key, data){
-        let datanode = new Node(this, key, false, {property: false, ref: false, dependency: false });
-        datanode.data = data;
-        this.children.push(datanode);
-    }
-    GetXMappedDefinition(){
-        let keys = this.schema["x-mapped-definition"]["$ref"];
-        keys = guide.parseSchemaRef(keys);
-        let definitionkey = guide.parseSchemaRef(keys[keys.length - 1], ".");
-        definitionkey = definitionkey.pop();
-        this.parent.appendData(this.key+"Mapped", guide.traverseObject([definitionkey, this.data], this.definition));
+    addChild(node){
+        node.parent = this;
+        if(this.schema["x-dictionary-key"])
+            node.isdictkey = true;
+        this.children.push(node);
         return true;
     }
-    GetXEnumReference(){
+    removeSelf(){ this.parent.removeChild(this); }
+    removeChild(node){
+        let list = this.children.filter( (child) => child != node);
+        this.children = list;
+        node = null;
+        // may need to come back and recursively remove all child nodes, which would go as a remove function in the node class
+        // depends on if js garbage collector gets them
+        return true;
+    }
+    compile(){
+        //checks for undefined because some data stores boolean values.
+        if(this.data != undefined){
+            this.transform();
+            return this.data;
+        }
+        this.data = {};
+        this.children.forEach( (child) => child.compile()); //compile the children first, so they have data
+        this.transform();  // transform data of child nodes
+        this.children.forEach( (child) => this.data[child.key] = child.data); //compile this node's data from transformed children
+        return this.data; // return compiled data upwards
+    }
+    #GetXMappedDefinition(){
+        let keys = guide.parseSchemaRef(this.schema["x-mapped-definition"]["$ref"]);
+        keys = guide.parseSchemaRef(keys.pop(), ".").pop(); // split the last item of keys by ".", and return the last item of the result
+        let datanode = new Node(null, this.key+"Mapped", false, {property: false, ref: false, dependency: false }, this.definition);
+        datanode.data = guide.traverseObject([keys, this.data], this.definition);
+        this.parent.addChild(datanode);
+    }
+    #GetXEnumReference(){
         let keylist = guide.parseSchemaRef(this.schema["x-enum-reference"]["$ref"]);
         let xenumschema = guide.findSchema(keylist)[0];
         if(!xenumschema){ return false; }
-        for(let element of xenumschema["x-enum-values"]){
-            if(element.numericValue == this.data){
-                if(this.options["x-enum-values"]){ this.data = element.identifier; }
-                else{ this.data = element.numericValue; }
-                return ;
-            }
-        }
+        let keypair = xenumschema["x-enum-values"].find( (pairs) => pairs.numericValue == this.data);
+        if(keypair == undefined)
+            return false; // maybe throw a warning later, but for now just don't mess with the data
+        if(this.options["x-enum-values"])
+            this.data = keypair.identifier;
+        else
+            this.data = keypair.numericValue;
+        return true;
     }
-    filterNodes(keylist){
-        for(let i= 0; i < this.children.length; i++){
-            let child = this.children[i];
-            let keepchild = false;
-            for(let key of keylist){
-                if(child.key == key){
-                    keepchild = true;
-                    break;
-                }
-                    
-            }
-            if(!keepchild){
-                this.children.splice(i, 1);
-                i -= 1; // subtract one, to re-evaluate the same spot, now that a new node is in it
-            }
-        }
-    }
-    FlipChildren(){}
-    RegroupObjects(options){
-        for(let groupkey in options){
-            let groupNode = new Node(this, groupkey, false, false, false);
-            for(let key of options[groupkey]){
-                console.log("key: "+key);
-                for(let i in this.children){
-                    let child = this.children[i];
-                    if(child.key == key){
-                        let temp = child;
-                        groupNode.children.push(temp);
-                        this.children.splice(i, 1);
-                    }
-                }
-            }
-            this.children.push(groupNode);
-        }
+    #GroupChildren(){
+        let groups = this.options["group"];
+        Object.entries(group).forEach( ([groupkey, keylist]) => {
+            let node = new Node(false, groupkey, false, {property: false, ref: false, dependency: false }, false);
+            // get a list of all children whose key is in the list of children to be grouped
+            let foundchildren = this.children.filter( (child) => keylist.find(child.key));
+            // filter the list of children down to the ones that are NOT in the list to be grouped.
+            this.children = this.children.filter( (child) => foundchildren.find(child) == undefined);
+            node.children = foundchildren;
+            this.children.addChild(node);
+            node.isdictkey = false; //this is grouped, we do NOT want it to be shown as keyed
+        });
     }
     transform(){
         if(this.schema["x-mapped-definition"] && this.options["x-mapped-definition"])
-            this.GetXMappedDefinition();
+            this.#GetXMappedDefinition();
         if(this.schema["x-enum-reference"])
-            this.GetXEnumReference();
+            this.#GetXEnumReference();
         if(this.options["filter"])
-            this.filterNodes(this.options["filter"]);
-        //[ "reduce", "filter", "attach", "combine", "group" ];
+            this.children = this.children.filter( (child) => this.options["filter"].find(child.key)); //filter out all keys that arent' in the filter list
         if(this.options["group"])
-            this.RegroupObjects(this.options["group"]);
+            this.#GroupChildren();
     }
-    compileData(){
-        if(this.data == undefined){
-            this.data = {};
-            for(let child of this.children)
-                child.compileData();
-            this.transform();
-            for(let child of this.children)
-                this.data[child.key] = child.data;
-            return this.data;
+    pruneChildren(keylist){
+        let pruneIndex = this.children.findIndex( (child) => keylist.find(child.key));
+        if(pruneIndex != -1){
+            let children = this.children[pruneIndex].children;
+            children.forEach( (child) => child.parent = this); //replace old parent with this node
+            this.children.splice(pruneIndex, 1, ...children); //remove the node with key, and replace it with it's children
+            this.pruneChildren(keylist); // new child has been appended, run again so it can be checked too
         }
-        else{
-            this.transform();
-            return this.data;
-        }     
-    }
-    pruneTree(keylist){
-        for(let i in this.children){
-            let child = this.children[i];
-            for(let key of keylist){
-                if(child.key == key){
-                    let child_children = child.children;
-                    for(let kid of child_children)
-                        kid.parent = this; //replace old parent with this node
-                    this.children.splice(i, 1, ...child_children); //remove the node with key, and replace it with it's children
-                    this.pruneTree(keylist); // new child has been appended, run again so it can be checked too
-                }
-            }
-        }
-        for(let child of this.children)
-            child.pruneTree(keylist);
+        this.children.forEach( (child) => child.pruneChildren(keylist));
     }
 }
 
-module.exports = { NodeController, Node};
+module.exports = Node;
