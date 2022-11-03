@@ -22,7 +22,7 @@ class NodeController {
         let node = this.#searchNode(keylist);
         if(!node)
             throw Error("Unable to find Node with the given keylist");
-        this.#removeChildNodeq(node);
+        this.#removeChildNode(node);
         return true;
     }
     #removeChildNode(node){ node.removeSelf(); }
