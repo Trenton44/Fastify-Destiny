@@ -1,6 +1,6 @@
 const guide = require("./json-schema-controller.js");
 const inheritable = [ "x-mapped-definition", "x-enum-values" ];
-const uninheritable = [ "reduce", "filter", "attach", "combine", "group" ];
+const uninheritable = [ "filter", "group", "link" ];
 
 class Node {
     constructor(parent, key, schema, config, definition){
