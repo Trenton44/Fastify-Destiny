@@ -140,7 +140,7 @@ class DataMap {
             config = guide.traverseObject(configkeys, this.config);
         else { configkeys = []; }
         if(refkeys instanceof Array){
-            refkeys = [refkeys.pop()];
+            refkeys = [refkeys[refkeys.length - 1]];
             ref = guide.traverseObject(refkeys, this.config);
         }
         else { refkeys = []; }
