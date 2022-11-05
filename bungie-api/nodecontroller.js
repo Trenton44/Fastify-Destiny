@@ -43,47 +43,65 @@ class NodeController {
         let linkNodes = this.#getNodesByOption("link");
         linkNodes.forEach( (node) => {
             let link = node.options.link;
-            let targetnode = false;
-            let keyused = child.key;
-            let newkey = child.parent.key;
-            if(link[0] = "!"){
-                targetnode = true;
-                link = link.slice(1);
+            if(link == "key"){
+                if(!links[node.key]){ links[node.key] = []; }
+                links[node.key].push(node);
+                return true;
             }
-            if(link != "key"){
-                let linkvar = child.children.find( (cchild) => cchild.key == link);
-                if(linkvar == -1){ throw Error("Could not find child "+link+" in node "+child.key); }
-                keyused = linkvar.data;
-                newkey = keyused+"Mapped";
+            else {
+                //if not "key", we are using the key of one of it's child attributes
+                // if not "key", we are also assuming this is the target for all other data.
+                let linkvar = node.children.find( (cchild) => cchild.key == link);
+                if(linkvar == undefined){ return false; } // some items may not have the desired key, like itemInstanceId. In this scenario, just move on.
+                if(!links[linkvar.data]){ links[linkvar.data] = []; }
+                links[linkvar.data].unshift(node);
+                links[linkvar.data].unshift(link+"Mapped");
+                return true;
             }
-            if(!links[keyused]){ links[keyused] = []; }
-            if(istarget)
-                links[keyused].unshift(child);
-            else
-                links[keyused].push(child);
-            child.key = newkey;
         });
-        Object.entries(links).forEach( ([linkkey, linklist]) =>{
-            let targetnode = linklist.shift();
-            while(linklist.length > 0)
-                this.moveNode(targetnode, linklist.shift());
-            delete links[linkkey]; //remove entirely
+        Object.entries(links).forEach( ([linkkey, linklist]) => {
+            if(linklist[0] instanceof Node){
+                // this is a list entirely made of nodes with link ="key".
+                //combine them all under the linkkey, add that key to their parent
+                //Note: They should all share a common parent
+                let targetnode = new Node(linkkey);
+                let parent = linklist[0].parent.parent;
+                while(linklist.length > 0){
+                    let temp = linklist.shift();
+                    temp.key = temp.parent.key;
+                    this.moveNode(targetnode, temp);
+                }
+                // they all shared a parent, take the ref from one of them and add the newly grouped node to it
+                parent.addChild(targetnode);
+            }
+            else{
+                // this is a list with a node that should be targeted
+                // combine array data to that node under the string in the first slot
+                let targetId = linklist.shift();
+                let targetnode = linklist.shift();
+                while(linklist.length > 0){
+                    let temp = linklist.shift();
+                    temp.key = targetId;
+                    this.moveNode(targetnode, temp);
+                }
+            }
+            
         });
         return true; // links should once again be an empty object by this point
     }
     #getNodesByOption(key){ return this.root.getChildrenWithOption(key); }
     #getNodesByKey(key){ return this.root.getChildrenMatchingKey(key); }
     compileTree(){
-        this.#connectLinks();
-        if(this.config.splice){
-            let splicenodes = [...this.#getNodesByKey("data"), ...this.#getNodesByKey("items")];
+        let removenodes = this.#getNodesByKey("privacy");
+        removenodes.forEach( (node) => node.delete());
+        let splicenodes = [...this.#getNodesByKey("data"), ...this.#getNodesByKey("items")];
             splicenodes.forEach( (node) => {
-                let parent = node.parent;
-                let children = node.children;
-                node.delete();
-                children.forEach( (child) => parent.addChild(child));
-            });
-        }
+            let parent = node.parent;
+            let children = node.children;
+            node.delete();
+            children.forEach( (child) => parent.addChild(child));
+        });
+        this.#connectLinks();
         return this.root.compile(); 
     }
 }
