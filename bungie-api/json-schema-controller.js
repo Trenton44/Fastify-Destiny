@@ -32,6 +32,7 @@ function findSchema(keylist, schema){
 }
 
 function findPathSchema(openapilink, code=200, requesttype="get", responseformat="application/json"){
+    if(!openapilink){ throw Error("A link existing within the openapi is required."); }
     let keys = [ "paths", openapilink, requesttype, "responses", code ];
     let schema = findSchema(keys, api_doc)[0];
     if(!schema){ return Error("Unable to find schema for response parameters")}
