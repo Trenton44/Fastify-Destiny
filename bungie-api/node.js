@@ -54,6 +54,8 @@ class Node {
             this.transform();
             return this.data;
         }
+        if(this.children.length == 0) // if no children, and no this.data, no point in compiling, nullify it.
+            this.delete();
         this.data = {};
         this.transform();
         this.children.forEach( (child) => child.compile());
