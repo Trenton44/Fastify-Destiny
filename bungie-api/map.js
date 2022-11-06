@@ -5,7 +5,7 @@ const Node = require("./node.js");
 // keywords supported through the config object, custom to this application
 // NOTE: THE ORDER OF THESE IS VERY IMPORTANT, THIS APPLIES TO ALL ARRAYS BELOW
 // the order of items in these arrays is the order that transformfunctions will be added, and subsequently applied, to node data
-const serverkeywords = [ "link", "filter", "group" ];
+const serverkeywords = [ "filter", "group", "link" ];
 // keywords supported through the config object, that appear in the bungie openapi json schema
 const schemakeywords = [ "x-mapped-definition", "x-enum-reference" ];
 
@@ -253,6 +253,15 @@ let config_object = {
             "characterdata": ["characters", "characterInventories", "characterProgressions", "characterRenderData", "characterActivities", "characterEquipment", "characterKiosks", "characterPlugSets", "characterPresentationNodes", "characterRecords", "characterCollectibles", "characterStringVariables", "characterCraftables", "characterCurrencyLookups"],
             "profiledata": ["profileInventory", "profileCurrencies", "profile", "platformSilver", "profileKiosks", "profilePlugSets", "profileProgression", "profilePresentationNodes", "profileRecords", "profileCollectibles", "profileTransitoryData", "profileStringVariables"]
         }
+    },
+    "Destiny.Entities.Inventory.DestinyInventoryComponent": {
+        "link": "key"
+    },
+    "Destiny.Entities.Characters.DestinyCharacterComponent":{
+        "link": "key"
+    },
+    "Destiny.Entities.Characters.DestinyCharacterRenderComponent": {
+        "link": "key"
     },
     "Destiny.Entities.Items.DestinyItemComponent": { 
         "filter": ["itemHash", "bucketHash", "itemHashMapped", "bucketHashMapped"]

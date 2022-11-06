@@ -44,20 +44,19 @@ class Node {
     }
     transform(){
         this.transformfunctions.forEach( (func) => func.transform(this));
+        this.children.forEach( (child) => child.transform());
+        return true;
     }
     /**
      * Compiles all children, then transforms the resulting data and returns it
      * @returns { Object } - the compiled data from this node's children, post transformation
      */
     compile(){
-        if(this.data != undefined){
-            this.transform();
+        if(this.data != undefined)
             return this.data;
-        }
         if(this.children.length == 0) // if no children, and no this.data, no point in compiling, nullify it.
             this.delete();
         this.data = {};
-        this.transform();
         this.children.forEach( (child) => child.compile());
         this.children.forEach( (child) => this.data[child.key] = child.data);
         return this.data;

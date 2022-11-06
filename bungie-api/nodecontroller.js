@@ -61,11 +61,18 @@ class NodeController {
         });
         Object.entries(links).forEach( ([linkkey, linklist]) => {
             if(linklist[0] instanceof Node){
-                // this is a list entirely made of nodes with link ="key".
+                // this is a list entirely made of nodes with link = "key".
                 //combine them all under the linkkey, add that key to their parent
                 //Note: They should all share a common parent
                 let targetnode = new Node(linkkey);
-                let parent = linklist[0].parent.parent;
+                let parentlist = [];
+                linklist.forEach( (node) => parentlist.push(node.parent));
+                //while the parents of the nodes doesn't match up, go up a parent and compare them
+                while(!parentlist.every((current) => current == parentlist[0])){
+                    parentlist = parentlist.map((parent) => parent.parent);
+                }
+                // somewhere in the hierarchy, a common parent was found, so take it
+                let parent = parentlist[0];
                 while(linklist.length > 0){
                     let temp = linklist.shift();
                     temp.key = temp.parent.key;
@@ -94,6 +101,7 @@ class NodeController {
     compileTree(){
         let removenodes = this.#getNodesByKey("privacy");
         removenodes.forEach( (node) => node.delete());
+        removenodes = null;
         let splicenodes = [...this.#getNodesByKey("data"), ...this.#getNodesByKey("items")];
             splicenodes.forEach( (node) => {
             let parent = node.parent;
@@ -101,6 +109,9 @@ class NodeController {
             node.delete();
             children.forEach( (child) => parent.addChild(child));
         });
+        splicenodes = null;
+        this.root.transform();
+        console.log(this.root);
         this.#connectLinks();
         return this.root.compile(); 
     }
