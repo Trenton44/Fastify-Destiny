@@ -5,7 +5,7 @@ This project is designed to be a wrapper around the Destiny 2 API, to make it ea
 * Handle details like HTTPS, data request/manipulation, account switching, etc. automatically
 * Adaptability/Flexibility, with as little development as possible
 
-If you've made it this far, and want to try this for yourself, head over to [Getting Started (under construction)]()
+If you've made it this far, and want to try this for yourself, head over to [Getting Started (under construction)](https://github.com/Trenton44/Fastify-Destiny/wiki/Getting-Started)
 
 ## Helpful Links:
 * [Bungie API](https://bungie-net.github.io/multi/index.html)
