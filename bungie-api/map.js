@@ -22,6 +22,15 @@ const inheritablekeywords = [ "x-mapped-definition", "x-enum-reference" ];
 const skipkeywords = [ "link" ];
 
 const transformFunctions = {
+    /**
+     * Nodes with the "x-mapped-definition" keyword enabled process their data using this function
+     * @function x-mapped-definition
+     * @memberof BuildTransform
+     * @inner
+     * @private
+     * @param {Node} node - Node instance
+     * @returns {boolean}
+     */
     "x-mapped-definition": function(node){
         let xdatanode = new Node(node.key+"Mapped");
         let xmapdata = guide.traverseObject([this.data.keys, node.data], this.data.data);
@@ -29,12 +38,30 @@ const transformFunctions = {
         node.parent.addChild(xdatanode);
         return true;
     },
+    /**
+     * Nodes with the "x-enum-reference" keyword enabled process their data using this function
+     * @function x-enum-reference
+     * @memberof BuildTransform
+     * @inner
+     * @private
+     * @param {Node} node - Node instance
+     * @returns {boolean}
+     */
     "x-enum-reference": function(node){
         let keypair = this.data.find( (pairs) => pairs.numericValue == node.data);
         if(keypair == undefined){ return false; }
         node.data = keypair.identifier;
         return true;
     },
+    /**
+     * Nodes with the "filter" keyword enabled process their data using this function
+     * @function filter
+     * @memberof BuildTransform
+     * @inner
+     * @private
+     * @param {Node} node - Node instance
+     * @returns {boolean}
+     */
     "filter": function(node){
         //filter out all keys that arent' in the filter list
         node.children.forEach( (child) =>{
@@ -44,6 +71,15 @@ const transformFunctions = {
         });
         return true;
     },
+    /**
+     * Nodes with the "group" keyword enabled process their data using this function
+     * @function group
+     * @memberof BuildTransform
+     * @inner
+     * @private
+     * @param {Node} node - Node instance
+     * @returns {boolean}
+     */
     "group": function(node){
         Object.entries(this.data).forEach( ([key, arr]) => {
             let groupnode = new Node(key, false);
@@ -56,18 +92,27 @@ const transformFunctions = {
     },
 };
 
+/**
+ * Creates an object that contains a function, and data necessary for the function to operate.
+ * @link DataMap uses this to pass transformation functions into @link Node instances
+ * @class BuildTransform
+ * @param {string} key - the @see Options keyword whose function will be saved in this instance
+ * @param {Object} data - Various, key-specific pieces of data necessary for the function to process @see Node data correctly
+ */
 class BuildTransform {
     constructor(key, data){
+        /** @property data - the data used for transform */
         this.data = data;
+        /** @property transform - Contains a reference to a private function of @see BuildTransform */
         this.transform = transformFunctions[key].bind(this);
     }
 }
 
 /**
  * Creates a new DataMap instance
- * @class
- * @param { Object } A Destiny Manifest JSON
- * @param { Object } config
+ * @class DataMap
+ * @param { Object } Manifest - A D2 API manifest file
+ * @param { Object } config - A @see {@link Config} Object
  */
 class DataMap {
     constructor(manifest, config={}){
@@ -79,13 +124,13 @@ class DataMap {
     
     /**
      * 
-     * @param { Object} request - An object containing necessary info about the api request
-     * @param { string } request.link - the corresponding open api link of the endpoint the request was made to
-     * @param { number } [request.code=200] - the status code of the response
-     * @param { string } [request.type=application/json] - the format type of the response
-     * @param { Object } data - the response data of the API request
-     * @param { Object } config - the config object specified for this server's endpoint (the one you made the request from) 
-     * @returns { Object } - The data processed and formatted according to the config
+     * @param {Object} request - An object containing necessary info about the api request
+     * @param {string} request.link - the corresponding open api link of the endpoint the request was made to
+     * @param {number} [request.code=200] - the status code of the response
+     * @param {string} [request.type=application/json] - the format type of the response
+     * @param {Object} data - the response data of the API request
+     * @param {Object} config - the config object specified for this server's endpoint (the one you made the request from) 
+     * @returns {Object} - The data processed and formatted according to the config
      */
     start(request, data, config){
         let nodes = new NodeController(config);
@@ -129,9 +174,9 @@ class DataMap {
     }
     /**
      * 
-     * @param { string[] } configkeys - keylist corresponding to the location in this.config
-     * @param { string[] } refkeys - keylist corresponding to the location in this.config
-     * @returns { Object } - option values available to the node in processing
+     * @param {string[]} configkeys - keylist corresponding to the location in this.config
+     * @param {string[]} refkeys - keylist corresponding to the location in this.config
+     * @returns {Options} - option values available to the node in processing
      */
     buildCustomOptions(configkeys, refkeys){
         let ref = {};
@@ -173,12 +218,12 @@ class DataMap {
         return options;
     }
     /**
-     * A Recursive function for converting a data object into a Node Tree
-     * @param { Object } data - the data from the Destiny API response 
-     * @param {*} schema - the schema from the OpenApi spec corresponding to the response data
-     * @param {*} config - the config object corresponding to the endpoint this server made the request with
-     * @param { @link Node } node - The parent Node for this data
-     * @returns { boolean }
+     * A Recursive function for converting a data object into a Node Tree.
+     * @param {Object} data - the data from the Destiny API response 
+     * @param {Object} schema - the schema from the OpenApi spec corresponding to the response data
+     * @param {Object} config - the config object corresponding to the endpoint this server made the request with
+     * @param {Node} node - The parent Node for this data
+     * @returns {boolean}
      */
     ProcessJSONLevel(data, schema, config, node){
         switch(schema.type){

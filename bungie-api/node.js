@@ -18,7 +18,7 @@ class Node {
     }
     /**
      * Adds a child to this node, changing it's parent node to this
-     * @param { @link Node } node 
+     * @param {Node} node 
      */
     addChild(node){
         node.parent = this;
@@ -30,12 +30,12 @@ class Node {
     delete(){ this.parent.deleteChild(this); }
     /**
      * removes this node from the current parent, retaining all data/children
-     * @param { @link Node } node 
+     * @param {Node} node 
      */
     removeChild(node){ this.children = this.children.filter( (child) => child != node); }
     /**
      * Deletes a child from list of children, removes reference to parent, and finally wipes the node
-     * @param { @link Node} node 
+     * @param {Node} node 
      */
     deleteChild(node){
         this.removeChild(node);

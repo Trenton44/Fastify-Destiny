@@ -15,7 +15,7 @@ const D2Plugin = require("./bungie-api/server-plugin.js");
  * @param { Object } opts : The options for the fastify server object
  * @param { Object } cookieopts : options for the server's session cookie.
  * @param { Object } corsopts : CORS options. if passed, sets session cookie SameSite attribute to "None"
- * @returns { Fastify Instance }
+ * @returns { Fastify }
  */
 function build(opts={}, cookieopts, corsopts=false){
     const app = fastify(opts); // initialize the fastify instance

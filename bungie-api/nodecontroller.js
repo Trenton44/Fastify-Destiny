@@ -1,4 +1,3 @@
-const guide = require("./json-schema-controller.js");
 const Node = require("./node.js");
 
 class NodeController {
