@@ -10,12 +10,12 @@ const tokenurl = apiroot+"/App/OAuth/token/";
 
 //  Use OPENAPI url (found in openapi.json, keys under "paths") 
 //  and inject parameters required for making a request
-function InjectURLParameters(url, paramobj){
+function InjectURLParameters(url, paramobj={}){
     for(parameter in paramobj)
         url = url.replace("{"+parameter+"}", paramobj[parameter]);
     return url;
 }
-function APIRequest(openapiurl, pathparameters, queryparameters, token, components=false){
+function APIRequest(openapiurl, pathparameters, queryparameters, token){
     let path = new URL(apiroot+InjectURLParameters(openapiurl, pathparameters));
     if(queryparameters){ path.search = new URLSearchParams(queryparameters); }
     return get(path.toString(), token);
