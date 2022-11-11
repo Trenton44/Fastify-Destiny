@@ -8,7 +8,7 @@ const cookie = require("@fastify/cookie");
 const cors = require("@fastify/cors");
 
 const endpoints = require("./endpoints/endpoints.js");
-const D2Plugin = require("./bungie-api/server-plugin.js");
+const Bungie = require("./bungie-api/plugin.js");
 
 /**
  * Builds the fastify server, using provided options
@@ -17,19 +17,11 @@ const D2Plugin = require("./bungie-api/server-plugin.js");
  * @param { Object } corsopts : CORS options. if passed, sets session cookie SameSite attribute to "None"
  * @returns { fastify }
  */
-function build(opts={}, cookieopts, corsopts=false){
+function build(opts, corsopts){
     const app = fastify(opts); // initialize the fastify instance
-    app.register(cookie); // registers @fastify/cookie
-    if(corsopts){
+    if(corsopts)
         app.register(cors, corsopts); // registers @fastify/cors
-        cookieopts.cookie.sameSite = "None"; // sets cookie SameSite attribute to "None" (allow cors to work)
-    }
-    app.register(session, cookieopts); // registers @fastify/session and passes cookie options
-    
-    app.register(D2Plugin); // registers the D2API functions into the server
-    // register the endpoints for the server.
-    app.register(endpoints);
-    
+    app.register(Bungie); // registers the D2API functions into the server
     return app; 
 }
 
