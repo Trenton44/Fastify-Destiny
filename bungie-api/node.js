@@ -39,6 +39,12 @@ class Node{
         this.children.forEach( (child) => list.splice(list.length -1, 0, ...child.getChildrenMatchingKey(key)));
         return this.key == key ? [ this, ...list] : list;
     }
+    searchParentOptions(key){
+        let option = this.options[key];
+        if(option != undefined)
+            return option;
+        return this.parent ? this.parent.searchParentOptions(key) : false;
+    }
     transform(){
         this.transforms.forEach( (func) => func.transform(this));
         this.children.forEach( (child) => child.transform());
