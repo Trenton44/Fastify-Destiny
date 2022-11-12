@@ -3,6 +3,7 @@
 const fs = require("fs");
 require("dotenv").config({ path: ".env" });
 const opts = require("./settings.js")[process.env.NODE_ENV];
+if(!opts){ throw Error("No configuration for server environment found"); }
 
 const server = require("./app.js")(opts, EnableCrossOrigin());
 
@@ -14,7 +15,7 @@ server.listen(
 
 function EnableCrossOrigin(){
     if(!process.env.ORIGIN)
-        return false;
+        throw Error("Missing ORIGIN env variable.");
     return {
         origin: process.env.ORIGIN,
         methods: ["GET"],
