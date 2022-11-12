@@ -3,7 +3,7 @@ const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
 const axios = require("axios");
 
-const settings = require("./settings.js")[process.env.NODE_ENV];
+const settings = require("./session-settings.js")[process.env.NODE_ENV];
 const endpoints = require("./endpoints");
 const buildSession = require("./session.js").buildSession;
 
@@ -28,6 +28,7 @@ module.exports = (fastify, options, next) => {
     });
 
     fastify.register(endpoints);
+    
     next();
 };
 

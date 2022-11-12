@@ -1,5 +1,5 @@
-const guide = require("./json-controller.js");
-const CustomErrors = require("error_types.js");
+const guide = require("./json-traverse.js");
+const CustomErrors = require("error-types.js");
 const configs = require("./configs/index.js");
 
 function InjectURIParameters(uri, params){

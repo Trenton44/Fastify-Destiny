@@ -1,5 +1,5 @@
-const session = require("express-session");
 const axios = require("axios");
+const api = require("./api.js");
 
 const axiosToken = axios.create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
