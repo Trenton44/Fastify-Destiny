@@ -1,5 +1,6 @@
 const guide = require("./json-controller.js");
 const CustomErrors = require("error_types.js");
+const configs = require("./configs/index.js");
 
 function InjectURIParameters(uri, params){
     for(parameter in params)
@@ -7,11 +8,18 @@ function InjectURIParameters(uri, params){
     return uri;
 }
 
-function ProcessResponse(response, oalink){
+function ProcessResponse(response, oalink, endpoint, userlang){
     // TODO: check response type. if HTML, throw unavailable error
+    if(response.type == "HTML")
+        Promise.reject("Bungie API Service is currently unavailable");
+    let config = configs[endpoint] ? configs[endpoint] : {};
     let respschema = guide.findPathSchema(oalink);
-    if(!respschema){ throw Error("unable to find a schema for this endpoint."); }
+    let data = new DataMap(config, userlang).map(response.data, respschema);
+
+
     // TODO: rework DataMap.js to take schema and response
 }
+
+
 
 module.exports = { InjectURIParameters, ProcessResponse };
