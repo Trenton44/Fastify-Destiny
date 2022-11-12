@@ -40,23 +40,61 @@ class DataMap {
         let options = this.#buildCustomOptions(refkeys);
         let funcs = this.transformFactory.buildTransformArray(options, schema);
         nodes.root = new Node("", options, funcs);
-        this.Process(data, schema, refkeys, nodes.root);
+        this.#Process(data, schema, refkeys, nodes.root);
         return nodes.compileTree();
     }
-    Process(data, schema, ckeys, node){
+    #Process(data, schema, ckeys, node){
         switch(schema.type){
             case "object": {
                 if(schema.properties){
                     Object.keys(data).forEach( (property) => {
                         let [ nodeschema, schemaref ] = guide.findSchema(["properties"], schema);
                         if(!schemaref && !nodeschema){
-                            let nextnode = new Node(property)
+                            let nextnode = new Node(property);
+                            node.addChild(nextnode);
+                            nextnode.data = data[property];
+                            return true;
                         }
+                        let options = this.#buildCustomOptions([ ...ckeys, property ], schemaref);
+                        let funcs = this.transformFactory.buildTransformArray(options, nodeschema);
+                        let nextnode = new Node(property, options, funcs);
+                        this.#Process(data[property], nodeschema, [...ckeys, property], nextnode);
                     });
                 }
+                else if(schema.additionalProperties){
+                    let [ nodeschema, schemaref ] = guide.findSchema(["additionalProperties"], schema);
+                    Object.keys(data).forEach( (property) => {
+                        let options = this.#buildCustomOptions([...ckeys, property], schemaref);
+                        let funcs = this.transformFactory.buildTransformArray(options, nodeschema);
+                        let nextnode = new Node(property, options, funcs);
+                        node.addChild(nextnode);
+                        this.#Process(data[property], nodeschema, [...ckeys, property], nextnode);
+                    });
+                }
+                else if(schema.allOf){
+                    let [ nodeschema, schemaref ] = guide.findSchema(["allOf", 0], schema);
+                    //  may need to come back and add schemaref/allOf to the config here
+                    this.#Process(data, nodeschema, ckeys, node);
+                }
+                else{ throw Error("This object has no properties, God help us all."); }
+                return true;
+            }
+            case "array": {
+                let [ nodeschema, schemaref ] = guide.findSchema(["items"], schema);
+                let options = this.#buildCustomOptions(ckeys, schemaref);
+                data.forEach( (current, index) => {
+                    let funcs = this.transformFactory.buildTransformArray(options, nodeschema);
+                    let nextnode = new Node(index, options, funcs);
+                    node.addChild(nextnode);
+                    this.#Process(current, nodeschema, ckeys, nextnode);
+                });
+                return true;
+            }
+            default: {
+                node.data = data;
+                return true;
             }
         }
-
     }
 }
 
