@@ -20,9 +20,16 @@ class DataMap {
         inheritablekeywords.forEach( (key) => {
             if(options[key] != undefined)
                 return true;
-            // rework everything after this point to use node's parent ref
-            // search recursively up/down the node tree for desired value
-            // mixes concerns a bit, but much faster than current version
+            let initial = false;
+            let ccurrent = this.config;
+            for(let key of ckeys){
+                let clevel = guide.tryTraversal(key, ccurrent);
+                if(!clevel)
+                    break;
+                if(clevel[key] != undefined)
+                    initial = clevel[key];
+            }
+            options[key] = initial;
         });
         return options;
     }
@@ -31,6 +38,26 @@ class DataMap {
         schema = schemaarr[0];
         let nodes = new NodeController(this.config);
         let options = this.#buildCustomOptions(refkeys);
+        let funcs = this.transformFactory.buildTransformArray(options, schema);
+        nodes.root = new Node("", options, funcs);
+        this.Process(data, schema, refkeys, nodes.root);
+        return nodes.compileTree();
+    }
+    Process(data, schema, ckeys, node){
+        switch(schema.type){
+            case "object": {
+                if(schema.properties){
+                    Object.keys(data).forEach( (property) => {
+                        let [ nodeschema, schemaref ] = guide.findSchema(["properties"], schema);
+                        if(!schemaref && !nodeschema){
+                            let nextnode = new Node(property)
+                        }
+                    });
+                }
+            }
+        }
 
     }
 }
+
+module.exports = DataMap;
