@@ -14,7 +14,7 @@
   "scripts": {
     "start": "node server.js",
     "devstart": "nodemon server.js",
-    "predeploy": "node bungie_api/manifest.js",
+    "predeploy": "node bungie-api/manifests/manifest.js",
     "deploy": "node server.js",
     "generate-docs": "jsdoc -c ./jsdoc.json",
     "test": "jest"
