@@ -90,4 +90,42 @@ async function validateSession(session){
     }
     return session._user.active;
 }
-module.exports = { buildSession, validateSession };
+
+async function BungieLogin(request, reply){
+    let redirect = new URL("https://www.bungie.net/en/OAuth/Authorize");
+    let state = crypto.randomBytes(16).toString("base64");
+    request.session._state = state;
+    redirect.search = new URLSearchParams({
+        client_id: process.env.BUNGIE_CLIENT_ID,
+        response_type: "code",
+        state: state
+    });
+    return reply.code(303).redirect(encodeURI(redirect));
+}
+
+async function BungieLoginResponse(request, response){
+    let valid = request.session._state === decodeURIComponent(request.query.state);
+    if(!valid){
+        request.session.destroy();
+        return reply.code(400).send({ error: "Invalid state parameter, user must re-authenticate." });
+    }
+    request.session._querycode = request.query.code;
+    return reply.code(303).redirect(process.env.ORIGIN);
+        
+}
+
+async function sessionStatus(request, reply){
+    return validateSession(request.session)
+    .then( (id) => reply.send({
+        bungie: true,
+        validated: id
+    }))
+    .catch( (error) => reply.send({
+        //TODO: add error checking to api requests, thencome back here and change these values depending on if validation failed or bungie service failed.
+        bungie: false, 
+        validated: false
+    }));
+
+}
+
+module.exports = { buildSession, validateSession, BungieLogin, BungieLoginResponse };
