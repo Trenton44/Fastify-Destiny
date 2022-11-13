@@ -17,7 +17,7 @@ function buildSession(store){
             language: "en",
             membershipId: false,
             active: false,
-            profiles: []
+            profiles: {}
         },
         get language(){ return this._user.language; },
         set language(language){ this._user.language = language; },
@@ -28,9 +28,8 @@ function buildSession(store){
         },
         get activeProfile(){ return this._user.profiles[this._user.active]; },
         set activeProfile(id){ this._user.active = id; },
-        get availableProfileIds(){
-            // TODO: need to implement session validation and decide on blueprint first.
-        },
+        get availableProfiles(){ return this._user.profiles; },
+        get availableProfileIds(){ return Object.keys(this._user.profiles); },
         get accessToken(){ return this._authdata.access_token; },
         get tokenExipiration(){
             return {
