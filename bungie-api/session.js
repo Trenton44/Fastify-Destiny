@@ -80,6 +80,25 @@ async function validateSession(session){
     }
    return true;
 }
+async function validateProfiles(session, BClient){
+    if(session.activeProfile)
+        return true;
+    if(session.availableProfileIds.length != 0){
+        session.activeProfile = session.availableProfileIds[0];
+        return true;
+    }
+    // if here, there are no user profiles, we need to retrieve them from bungie
+    const openapiurl = "/User/GetMembershipsById/{membershipId}/{membershipType}/";
+    let uri = InjectURIParameters(openapiurl, {
+        membershipId: session._user.membershipId,
+        membershipType: -1
+    });
+    let response = await BClient(uri)
+    .then( (resp) => api.ProcessResponse(resp, openapiurl, "UserData", session._user.language));
+    session._user.profiles = response.destinyMemberships;
+    session.activeProfile = response.primaryMembershipId ? 
+        response.primaryMembershipId : Object.keys(session.availableProfileIds)[0];
+}
 
 async function BungieLogin(request, reply){
     let redirect = new URL("https://www.bungie.net/en/OAuth/Authorize");

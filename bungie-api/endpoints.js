@@ -14,6 +14,7 @@ let user = (fastify, options, next) => {
     fastify.addHook('preHandler', async (request, reply) => {
         await validateSession(request.session).catch( (error) => reply.code(400).send({ error: "User has not authorized this app." }));
         request.BClient.headers.Authorization = "Bearer "+request.session.accessToken;
+        await validateProfiles(request.session, request.BClient).catch( (error) => reply.code(400).send({ error: "Unable to retrieve user profiles." }));
         return true;
     });
     fastify.get("/ActiveProfile", async (request, reply) => {
@@ -24,27 +25,6 @@ let user = (fastify, options, next) => {
 
     });
      */
-
-    /**
-     * THE VERY FIRST endpoint your application should call.
-     */
-    fastify.get("/UserProfiles", async (request, reply) => {
-        if(request.session.availableProfileIds.length == 0){ 
-            request.log.info("No user profiles exist. fetching them now.");
-            const openapiurl = "/User/GetMembershipsById/{membershipId}/{membershipType}/";
-            let uri = InjectURIParameters(openapiurl, {
-                membershipId: request.session._user.membershipId,
-                membershipType: -1
-            });
-            let response = await request.BClient(uri)
-            .then( (resp) => api.ProcessResponse(resp, openapiurl, "ActiveProfile", request.session._user.language))
-            .catch( (error) => reply.code(400).send(error));
-            request.session._user.profiles = response.destinyMemberships;
-            request.session.activeProfile = response.primaryMembershipId ? 
-                response.primaryMembershipId : Object.keys(request.session.availableProfileIds)[0];
-        }
-        return request.session.availableProfiles;
-    });
 
     fastify.get("/GetProfile", { schema: {} }, async (request, reply) => {
         const openapiuri = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
