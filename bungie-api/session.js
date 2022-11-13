@@ -98,6 +98,7 @@ async function validateProfiles(session, BClient){
     session._user.profiles = response.destinyMemberships;
     session.activeProfile = response.primaryMembershipId ? 
         response.primaryMembershipId : Object.keys(session.availableProfileIds)[0];
+    return true;
 }
 
 async function BungieLogin(request, reply){
@@ -123,17 +124,9 @@ async function BungieLoginResponse(request, response){
 }
 
 async function sessionStatus(request, reply){
-    return validateSession(request.session)
-    .then( (id) => reply.send({
-        bungie: true,
-        validated: id
-    }))
-    .catch( (error) => reply.send({
-        //TODO: add error checking to api requests, thencome back here and change these values depending on if validation failed or bungie service failed.
-        bungie: false, 
-        validated: false
-    }));
-
+    await validateSession(request.session);
+    await validateProfiles(request.session, request.BClient);
+    return true;
 }
 
 module.exports = { buildSession, validateSession, BungieLogin, BungieLoginResponse };
