@@ -1,0 +1,22 @@
+{
+    "$id": "/GetProfile",
+    "title": "Input Schema for the /GetProfile endpoint.",
+    "type": "object",
+    "querystring": {
+        "type": "object",
+        "required": ["components"],
+        "properties":{
+            "components": { 
+                "type": "array",
+                "uniqueItems": true,
+                "items": { 
+                    "oneOf": [
+                        { "type": "number" },
+                        { "type": "string" }
+                    ]
+                }
+            },
+            "sortBy": { "type": "string" }
+        }
+    }
+}
