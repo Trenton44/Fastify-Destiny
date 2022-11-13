@@ -65,7 +65,7 @@ async function validateSession(session){
                 "grant_type": "authorization_code",
                 "code": session._querycode
             }
-        }); //request Access Token
+        }).then( (result) => session.authData(result.data)); //request Access Token
     }
     let expire = session.tokenExipiration;
     if(Date.now() > expire.access){
@@ -77,18 +77,9 @@ async function validateSession(session){
                 "grant_type": "refresh_token",
                 "refresh_token": session._authdata.refresh_token
             }
-        }); //request Refresh Token
+        }).then( (result) => session.authData(result.data)); //request Refresh Token
     }
-    if(!session.activeProfile){
-        // no active profile exists, but user is authenticated, so we just need to fetch the data.
-        let data = await ; // GetMembershipById
-        session._user.profiles = data.destinyMemberships;
-        if(data.primaryMembershipId)
-            session.activeProfile(data.primaryMembershipId);
-        else
-            session.activeProfile(Object.keys(data.destinyMemberships)[0])
-    }
-    return session._user.active;
+   return true;
 }
 
 async function BungieLogin(request, reply){
@@ -111,7 +102,6 @@ async function BungieLoginResponse(request, response){
     }
     request.session._querycode = request.query.code;
     return reply.code(303).redirect(process.env.ORIGIN);
-        
 }
 
 async function sessionStatus(request, reply){

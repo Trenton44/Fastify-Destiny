@@ -16,6 +16,7 @@ let user = (fastify, options, next) => {
         request.BClient.headers.Authorization = "Bearer "+request.session.accessToken;
         return true;
     });
+    
     fastify.get("/GetProfile", { schema: {} }, async (request, reply) => {
         const openapiuri = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
         let profile = request.session.activeProfile;

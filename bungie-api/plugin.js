@@ -6,6 +6,7 @@ const axios = require("axios");
 const settings = require("./session-settings.js")[process.env.NODE_ENV];
 const endpoints = require("./endpoints");
 const buildSession = require("./session.js").buildSession;
+const schemaLoader = require("./schemas");
 
 const axiosbase = {
     baseURL: "https://www.bungie.net/Platform",
@@ -16,6 +17,10 @@ const axiosbase = {
 };
 
 module.exports = (fastify, options, next) => {
+    for(schema in schemaLoader){
+        fastify.addSchema(schema);
+    }
+
     fastify.register(cookie); // register cookie to be used with bungie api session
     fastify.register(session, settings); // register session storage for bungie api.
     fastify.decorateRequest("BClient", null); // Add a utility function for making requests to the api
