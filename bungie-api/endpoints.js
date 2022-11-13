@@ -26,7 +26,7 @@ let user = (fastify, options, next) => {
     });
      */
 
-    fastify.get("/GetProfile", { schema: {} }, async (request, reply) => {
+    fastify.get("/GetProfile", { schema: {"$ref": "/input/GetProfile#" } }, async (request, reply) => {
         const openapiuri = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
         let profile = request.session.activeProfile;
         let uri = InjectURIParameters(openapiuri, {
