@@ -8,18 +8,11 @@ function InjectURIParameters(uri, params){
     return uri;
 }
 
-function ProcessResponse(response, oalink, endpoint, userlang){
-    // TODO: check response type. if HTML, throw unavailable error
-    if(response.type == "HTML")
-        Promise.reject("Bungie API Service is currently unavailable");
+function MapResponse(response, oalink, endpoint, userlang){
     let config = getConfig(endpoint);
     let respschema = guide.findPathSchema(oalink);
     let data = new DataMap(config, userlang).map(response.data, respschema);
-
-
-    // TODO: rework DataMap.js to take schema and response
+    return data;
 }
-
-
 
 module.exports = { InjectURIParameters, ProcessResponse };

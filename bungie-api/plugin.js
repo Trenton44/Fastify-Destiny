@@ -1,7 +1,6 @@
 require("dotenv").config({ path: "../.env" });
 const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
-const axios = require("axios");
 
 const settings = require("./session-settings.js")[process.env.NODE_ENV];
 const endpoints = require("./endpoints");
@@ -14,6 +13,14 @@ const axiosbase = {
         "X-API-Key": process.env.BUNGIE_API_KEY,
         "User-Agent": "VexGate API/"+process.env.VERSION+" AppId/"+process.env.BUNGIE_CLIENT_ID
     },
+    transformResponse: function(data){
+        /*if(data.type == "HTML")
+            return Promise.reject("Bungie API Service is currently unavailable");
+        if(data.ErrorCode !== 1)
+            return Promise.reject(data.ErrorStatus);
+        */
+       console.log("axios result: "+data);
+    }
 };
 
 module.exports = (fastify, options, next) => {

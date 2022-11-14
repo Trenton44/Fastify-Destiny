@@ -1,5 +1,5 @@
 const { validateSession, BungieLogin, BungieLoginResponse, sessionStatus } = require("./session");
-const { InjectURIParameters, ProcessResponse } = require("./api.js");
+const { InjectURIParameters, MapResponse } = require("./api.js");
 
 let general = (fastify, options, next) => {
     fastify.get("/", sessionStatus);
@@ -39,13 +39,11 @@ let user = (fastify, options, next) => {
         return request.BClient(uri, {
             params: { components: request.query.components }
         })
-        .then( (response) => ProcessResponse(response, openapiuri))
+        .then( (response) => MapResponse(response, openapiuri))
         .catch( (error) => reply.code(400).send({ error: "error" }));
     });
     next();
 };
-
-
 
 module.exports = (fastify, options, next) => {
     fastify.register(general);
