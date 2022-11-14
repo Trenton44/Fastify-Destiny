@@ -28,6 +28,10 @@ function buildSession(store){
         },
         get activeProfile(){ return this._user.profiles[this._user.active]; },
         set activeProfile(id){ this._user.active = id; },
+        get userProfiles(){ return {
+            active: this._user.active,
+            profiles: this._user.profiles
+        }},
         get availableProfiles(){ return this._user.profiles; },
         get availableProfileIds(){ return Object.keys(this._user.profiles); },
         get accessToken(){ return this._authdata.access_token; },

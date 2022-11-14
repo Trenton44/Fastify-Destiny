@@ -17,8 +17,11 @@ let user = (fastify, options, next) => {
         await validateProfiles(request.session, request.BClient).catch( (error) => reply.code(400).send({ error: "Unable to retrieve user profiles." }));
         return true;
     });
-    fastify.get("/ActiveProfile", async (request, reply) => {
-        return request.session.activeProfile;
+    fastify.get("/UserProfiles", async (request, reply) => {
+        return request.session.userProfiles;
+    });
+    fastify.post("/UserProfiles", async (request, reply) => {
+        //code to validate request and update active user here.
     });
     /*
     fastify.post("/ActiveProfile", async (request, reply) => {
