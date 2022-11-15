@@ -1,5 +1,5 @@
 {
-    "$id": "/input/GetProfile",
+    "$id": "/input/GetProfile.json",
     "title": "Input Schema for the /GetProfile endpoint.",
     "type": "object",
     "querystring": {

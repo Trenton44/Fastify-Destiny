@@ -7,7 +7,6 @@ const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
 const cors = require("@fastify/cors");
 
-const endpoints = require("./endpoints/endpoints.js");
 const Bungie = require("./bungie-api/plugin.js");
 
 /**

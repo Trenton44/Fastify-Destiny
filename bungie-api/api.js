@@ -1,5 +1,4 @@
-const guide = require("./json-traverse.js");
-const CustomErrors = require("error-types.js");
+const guide = require("./utils/json-traverse.js");
 const getConfig = require("./configs/index.js");
 
 function MapResponse(response, oalink, endpoint, userlang){

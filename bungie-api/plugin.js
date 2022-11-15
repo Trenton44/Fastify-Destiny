@@ -26,14 +26,15 @@ const axiosbase = {
 
 module.exports = (fastify, options, next) => {
     for(schema in schemaLoader){
-        fastify.addSchema(schema);
+        fastify.addSchema(schemaLoader[schema]);
     }
 
     fastify.register(cookie); // register cookie to be used with bungie api session
     fastify.register(session, settings); // register session storage for bungie api.
     fastify.decorateRequest("BClient", null); // Add a utility function for making requests to the api
-    fastify.fastify.decorateRequest("InjectURI", InjectURI);
+    fastify.decorateRequest("InjectURI", InjectURIParameters);
     fastify.addHook("onRequest", (request, reply) => {
+        
         // language var will be how we determine if session is new. if it doesn't exist, this is a new user.
         // stopgap until i find a way to properly detect new session instances
         if(!request.session.language)
@@ -56,7 +57,7 @@ module.exports = (fastify, options, next) => {
 };
 
 
-function InjectURI(uri, params){
+function InjectURIParameters(uri, params){
     for(parameter in params)
         uri = uri.replace("{"+parameter+"}", params[parameter]);
     return uri;

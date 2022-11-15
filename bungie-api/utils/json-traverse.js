@@ -1,4 +1,4 @@
-const api_doc = require("./openapi.json");
+const api_doc = require("../manifests/openapi.json");
 
 function tryTraversal(keylist, obj){
     try{
@@ -7,7 +7,7 @@ function tryTraversal(keylist, obj){
     catch{
         return false;
     }
-    let obj = obj instanceof Object ? obj : false;
+    return obj = obj instanceof Object ? obj : false;
 }
 
 function parseRef(reflink, delim){
