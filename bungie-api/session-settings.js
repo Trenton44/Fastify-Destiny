@@ -1,9 +1,15 @@
 require("dotenv").config({ path: "../.env" });
 const MongoStore = require("connect-mongo");
 //const express_session = require("express-session"); //connect-mongo requires this to be installed, but it is unused
-module.exports = {
-    production: {
-        cookie: {
+module.exports = (env) => {
+    if(!envs[env])
+        throw Error("No valid session configuration for "+env);
+    return envs[env];
+};
+
+let envs = {
+    get production() {
+        return {
             secret: process.env.SESSION_STORE_SECRET,
             cookieName: process.env.COOKIE_NAME,
             saveUninitialized: true,
@@ -12,7 +18,7 @@ module.exports = {
                 maxAge: 3600000, //1 Hour in milliseconds
                 httpOnly: true,
                 secure: true,
-                sameSite: "Strict",
+                sameSite: "None",
             },
             store: MongoStore.create({
                 mongoUrl: process.env.MONGO_DB_URL,
@@ -34,10 +40,10 @@ module.exports = {
                     at_size: process.env.CRYPTO_AT_SIZE
                 }
             })
-        }
+        };
     },
-    development: {
-        cookie: {
+    get development() {
+        return {
             secret: process.env.SESSION_STORE_SECRET,
             cookieName: process.env.COOKIE_NAME,
             saveUninitialized: true,
@@ -46,8 +52,22 @@ module.exports = {
                 maxAge: 3600000, //1 Hour in milliseconds
                 httpOnly: true,
                 secure: true,
-                sameSite: "Strict",
-            },
-        }
+                sameSite: "None",
+            }
+        };
+    },
+    get testing() {
+        return {
+            secret: process.env.SESSION_STORE_SECRET,
+            cookieName: process.env.COOKIE_NAME,
+            saveUninitialized: true,
+            cookie: {
+                path: "/",
+                maxAge: 3600000, //1 Hour in milliseconds
+                httpOnly: true,
+                secure: true,
+                sameSite: "None",
+            }
+        };
     }
 };
