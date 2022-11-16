@@ -3,8 +3,7 @@
  * @module Server
  */
 const fastify = require('fastify');
-const session = require("@fastify/session");
-const cookie = require("@fastify/cookie");
+
 const cors = require("@fastify/cors");
 
 const Bungie = require("./bungie-api/plugin.js");
@@ -16,11 +15,21 @@ const Bungie = require("./bungie-api/plugin.js");
  * @param { Object } corsopts : CORS options. if passed, sets session cookie SameSite attribute to "None"
  * @returns { fastify }
  */
-function build(opts, corsopts){
+function build(opts){
     const app = fastify(opts); // initialize the fastify instance
-    app.register(cors, corsopts); // registers @fastify/cors
+    app.register(cors, EnableCrossOrigin()); // registers @fastify/cors
     app.register(Bungie); // registers the D2API functions into the server
     return app; 
 }
 
+function EnableCrossOrigin(){
+    if(!process.env.ORIGIN)
+        throw Error("Missing ORIGIN env variable.");
+    return {
+        origin: process.env.ORIGIN,
+        methods: ["GET"],
+        credentials: true,
+        strictPreflight: true,
+    };
+}
 module.exports = build;
