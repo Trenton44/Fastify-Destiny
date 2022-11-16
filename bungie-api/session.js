@@ -32,8 +32,6 @@ function buildSession(store){
             active: this._user.active,
             profiles: this._user.profiles
         }},
-        get availableProfiles(){ return this._user.profiles; },
-        get availableProfileIds(){ return Object.keys(this._user.profiles); },
         get accessToken(){ return this._authdata.access_token; },
         get tokenExipiration(){
             return {
