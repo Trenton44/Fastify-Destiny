@@ -1,5 +1,5 @@
 const axios = require("axios");
-const api = require("./api.js");
+const { MapResponse } = require("./api.js");
 
 const axiosToken = axios.create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
@@ -99,7 +99,7 @@ async function validateProfiles(request){
         membershipType: -1
     });
     let response = await request.BClient(uri)
-    .then( (resp) => api.ProcessResponse(resp, openapiurl, "UserData", session._user.language));
+    .then( (resp) => MapResponse(resp, openapiurl, "UserData", session._user.language));
     session._user.profiles = response.destinyMemberships;
     session.activeProfile = response.primaryMembershipId ? 
         response.primaryMembershipId : Object.keys(session.availableProfileIds)[0];
@@ -128,10 +128,4 @@ async function BungieLoginResponse(request, response){
     return reply.code(303).redirect(process.env.ORIGIN);
 }
 
-async function sessionStatus(request, reply){
-    await validateSession(request.session);
-    await validateProfiles(request.session, request.BClient);
-    return true;
-}
-
-module.exports = { buildSession, validateSession, BungieLogin, BungieLoginResponse };
+module.exports = { buildSession, validateSession, validateProfiles, BungieLogin, BungieLoginResponse };
