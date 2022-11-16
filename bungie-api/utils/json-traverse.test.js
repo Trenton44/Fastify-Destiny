@@ -6,9 +6,11 @@ test("tryTraversal() should return false on invalid obj location.", () => {
     test = {
         "beans": {
             "potatoes": []
-        }
+        },
+        "tomatoes": null
     }
     expect(guide.tryTraversal(["beans", "apples"], test)).toEqual(false);
+    expect(guide.tryTraversal(["tomatoes"], test)).toEqual(null);
 });
 
 test("tryTraversal() should return reference to obj location if found.", () => {

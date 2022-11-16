@@ -5,13 +5,9 @@ function tryTraversal(keylist, obj){
         throw("An object to traverse is required.");
     if(!(keylist instanceof Array))
         throw("Keys to search through the object must in an array");
-    try{
-        keylist.forEach( (key) => obj = obj[key]);
-    }
-    catch{
-        return false;
-    }
-    return obj = obj !== undefined ? obj : false;
+    try{ keylist.forEach( (key) => obj = obj[key]); }
+    catch{ return false; }
+    return obj !== undefined ? obj : false;
 }
 
 function parseRef(reflink, delim){
