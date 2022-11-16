@@ -2,6 +2,8 @@
 /deprecated
 /node_modules
 bungie-api/manifests/manifest
+bungie-api/manifests/*.json
+
 .env
 *.pem
 dockertoAWS.sh
