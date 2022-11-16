@@ -41,6 +41,7 @@ const transformFunctions = {
 class TransformFactory {
     constructor(language){
         this.language = language;
+        this.manifest = getManifest(this.language);
     }
     buildTransformArray(options, schema){
         let functions = [];
@@ -56,7 +57,7 @@ class TransformFactory {
                     case "x-mapped-definition": {
                         let keys = guide.parseSchemaRef(schema["x-mapped-definition"]["$ref"]);
                         keys = guide.parseSchemaRef(keys.pop(), ".");
-                        functions.push(new BuildTransform(key, { keys: keys, data: getManifest(this.language)}));
+                        functions.push(new BuildTransform(key, { keys: keys, data: this.manifest}));
                         break;
                     }
                 }
