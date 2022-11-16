@@ -1,7 +1,7 @@
 require("dotenv").config({ path: ".env" });
 const fs = require("fs");
 
-module.exports = {
+let envs = {
     production: {
         trustProxy: true,
         logger: true,
@@ -27,5 +27,19 @@ module.exports = {
             key: fs.readFileSync(process.env.HTTPS_KEY_PATH),
             cert: fs.readFileSync(process.env.HTTPS_CERT_PATH),
         },
-    }
+    },
+    testing: {
+        trustProxy: true,
+        logger: true,
+        https: {
+            allowHTTP1: true,
+            key: fs.readFileSync(process.env.HTTPS_KEY_PATH),
+            cert: fs.readFileSync(process.env.HTTPS_CERT_PATH),
+        },
+    },
+}
+module.exports = (env) =>{
+    if(!envs[env])
+        throw Error("Enviornment "+env+" has no valid settings configuration.");
+    return envs[env];
 };
