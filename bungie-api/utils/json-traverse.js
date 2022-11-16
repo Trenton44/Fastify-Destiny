@@ -34,3 +34,5 @@ function findPath(oalink, reqtype, code=200, repformat="application/json"){
     schema = findSchema(keys, schema);
     return schema;
 }
+
+module.exports = { findPath, findSchema, parseRef, tryTraversal };
