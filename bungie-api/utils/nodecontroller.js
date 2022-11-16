@@ -7,8 +7,8 @@ class NodeController {
     }
     searchNode(refkeys){
         let node = this.root;
-        while(keylist.length > 0){
-            node = node.children.find( (child) => child.key === keylist.shift());
+        while(refkeys.length > 0){
+            node = node.children.find( (child) => child.key === refkeys.shift());
             if(!node)
                 return false;
         }
@@ -89,8 +89,8 @@ class NodeController {
         });
         return true; // links should once again be an empty object by this point
     }
-    #getNodesByOption(key){}
-    #getNodesByKey(key){}
+    #getNodesByOption(key){ return this.root.getChildrenWithOption(key); }
+    #getNodesByKey(key){ return this.root.getChildrenMatchingKey(key); }
     #removeNodes(nodearr){ nodearr.forEach( (node) => node.delete()); }
     #spliceNodes(nodearr){
         nodearr.forEach( (node) => {
