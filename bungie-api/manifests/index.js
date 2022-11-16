@@ -1,9 +1,10 @@
-const manifests = {};
-const fs = require("fs");
+const manifests = require("./languages.json");
+const { accessSync, constants } = require("fs");
+const path = require("path");
 
-fs.readdirSync(__dirname+"/manifest").forEach( (file) => {
-    manifests[file] = require("./manifest/"+file+".json");
-});
-module.exports = function(language){
-    return manifests[language] ? manifests[language] : manifests["en"];
+module.exports = (language) => {
+    //console.time("manifest retrieval");
+    let manifest = manifests[language] ? require(manifests[language]) : require(manifests["en"]);
+    //console.timeEnd("manifest retrieval");
+    return manifest;
 };
