@@ -11,11 +11,11 @@ let general = (fastify, options, next) => {
 
 let user = (fastify, options, next) => {
     fastify.addHook('preHandler', async (request, reply) => {
-        await validateSession(request.session).catch( (error) => reply.code(400).send({ error: "User has not authorized this app." }));
-        request.BClient.headers.Authorization = "Bearer "+request.session.accessToken;
-        await validateProfiles(request).catch( (error) => reply.code(400).send({ error: "Unable to retrieve user profiles." }));
-        return true;
+        await validateSession(request.session).catch( (error) => error);
+        request.BClient.headers["Authorization"] = "Bearer "+request.session.accessToken;
+        await validateProfiles(request).catch( (error) => error);
     });
+    
     fastify.get("/", async (request, reply) => {
         // if user doesn't receive a response, this api is down
         // if user receives a BungieUnavailable error, request failed at preHandler, because bungie is down

@@ -4,7 +4,7 @@ const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
 
 const settings = require("./session-settings.js")(process.env.NODE_ENV);
-const endpoints = require("./endpoints");
+const endpoints = require("./endpoints.js");
 const schemaLoader = require("./schemas");
 const { buildSession } = require("./session.js");
 const { buildAPIRequest } = require("./api.js");
@@ -18,7 +18,7 @@ module.exports = (fastify, options, next) => {
     fastify.register(session, settings); // register session storage for bungie api.
     fastify.decorateRequest("BClient", null); // Add a utility function for making requests to the api
     fastify.decorateRequest("InjectURI", InjectURIParameters);
-    fastify.addHook("onRequest", (request, reply) => {
+    fastify.addHook("onRequest", async (request, reply) => {
         // language var will be how we determine if session is new. if it doesn't exist, this is a new user.
         // stopgap until i find a way to properly detect new session instances
         if(!request.session.language)
