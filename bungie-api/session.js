@@ -66,7 +66,8 @@ async function validateSession(session){
                 "grant_type": "authorization_code",
                 "code": session._querycode
             }
-        }).then( (result) => session.authData(result.data)); //request Access Token
+        }).then( (result) => session.authData(result.data))
+        .catch( (error) => Promise.reject(error)); //request Access Token
     }
     let expire = session.tokenExipiration;
     if(Date.now() > expire.access){
@@ -78,7 +79,8 @@ async function validateSession(session){
                 "grant_type": "refresh_token",
                 "refresh_token": session._authdata.refresh_token
             }
-        }).then( (result) => session.authData(result.data)); //request Refresh Token
+        }).then( (result) => session.authData(result.data))
+        .catch( (error) => Promise.reject(error)); //request Refresh Token
     }
    return true;
 }
@@ -97,7 +99,8 @@ async function validateProfiles(request){
         membershipType: -1
     });
     let response = await request.BClient(uri)
-    .then( (resp) => MapResponse(resp, openapiurl, "UserData", session._user.language));
+    .then( (resp) => MapResponse(resp, openapiurl, "UserData", session._user.language))
+    .catch( (error) => Promise.reject(error));
     session._user.profiles = response.destinyMemberships;
     session.activeProfile = response.primaryMembershipId ? 
         response.primaryMembershipId : Object.keys(session.availableProfileIds)[0];
