@@ -11,14 +11,12 @@ let general = (fastify, options, next) => {
 
 let user = (fastify, options, next) => {
     fastify.addHook('preHandler', async (request, reply) => {
-        try{
-            await validateSession(request.session);
+        return validateSession(request.session)
+        .then( (success) =>{
             request.BClient.headers["Authorization"] = "Bearer "+request.session.accessToken;
-            await validateProfiles(request);
-        }
-        catch (error){
-            return reply.code(400).send(error);
-        }
+            return validateProfiles(request);
+        })
+        .catch( (error) => reply.code(400).send(error));
     });
     
     fastify.get("/", async (request, reply) => {
