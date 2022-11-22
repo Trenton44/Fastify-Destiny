@@ -4,6 +4,7 @@ require("dotenv").config({ path: ".env" });
 
 const opts = require("./settings.js")(process.env.NODE_ENV);
 
+// spin up a local mongodb database for development purposes
 if(process.env.NODE_ENV == "development"){
     require("./localdb.js").then( (db) => {
         process.env.MONGO_DB_URL = db.getUri();
@@ -13,9 +14,8 @@ if(process.env.NODE_ENV == "development"){
     .catch( error => error);
 }
 else{ startServer(); }
-    
 
-    
+// Start the server, listening on port PORT_NUMBER
 function startServer(){
     server = require("./app.js")(opts);
     console.log("Starting server.");
@@ -23,13 +23,12 @@ function startServer(){
         port: process.env.PORT_NUMBER, 
         host: process.env.HOST 
     })
-    .then( (address) => console.log("server listening on "+address))
     .catch( (error) => {
         console.log(error); 
         process.exit(1); 
     });
     return server;
 }
-// Start the server, listening on port PORT_NUMBER
+
 
 
