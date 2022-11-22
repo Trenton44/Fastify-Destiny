@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { MapResponse } = require("./api.js");
+const { UserUnauthorized } = require("./errortypes.js");
 
 const axiosToken = axios.create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
@@ -33,7 +34,7 @@ function buildSession(store){
             profiles: this._user.profiles
         }},
         get accessToken(){ return this._authdata.access_token; },
-        get tokenExipiration(){
+        get tokenExpiration(){
             return {
                 access: this._authdata.access_expires,
                 refresh: this._authdata.refresh_expires
@@ -59,7 +60,7 @@ function buildSession(store){
 async function validateSession(session){
     if(!session.isLoggedIn){
         if(!session._querycode)
-            Promise.reject("No auth data, and no query code, user is not authorized.");
+            throw new UserUnauthorized("No auth data, and no query code, user is not authorized.");
         await axiosToken.post("", { 
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             data: {
@@ -67,20 +68,18 @@ async function validateSession(session){
                 "code": session._querycode
             }
         }).then( (result) => session.authData(result.data))
-        .catch( (error) => Promise.reject(error)); //request Access Token
     }
-    let expire = session.tokenExipiration;
+    let expire = session.tokenExpiration;
     if(Date.now() > expire.access){
         if(Date.now() > expire.refresh)
-            Promise.reject("Refresh token has expired, user will need to re-authenticate.");
+            throw new UserUnauthorized("Refresh token has expired, user will need to re-authenticate.");
         await axiosToken.post("", { 
             headers: {"X-API-Key": process.env.BUNGIE_API_KEY },
             data: {
                 "grant_type": "refresh_token",
                 "refresh_token": session._authdata.refresh_token
             }
-        }).then( (result) => session.authData(result.data))
-        .catch( (error) => Promise.reject(error)); //request Refresh Token
+        }).then( (result) => session.authData(result.data));
     }
    return true;
 }
@@ -100,7 +99,6 @@ async function validateProfiles(request){
     });
     let response = await request.BClient(uri)
     .then( (resp) => MapResponse(resp, openapiurl, "UserData", session._user.language))
-    .catch( (error) => Promise.reject(error));
     session._user.profiles = response.destinyMemberships;
     session.activeProfile = response.primaryMembershipId ? 
         response.primaryMembershipId : Object.keys(session.availableProfileIds)[0];
