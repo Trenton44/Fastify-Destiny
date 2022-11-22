@@ -35,4 +35,4 @@ test("endpoint '/' should return the active profile", async () => {
     expect(result.json()).toEqual({
         "potato": "beans"
     });
-})
+});
