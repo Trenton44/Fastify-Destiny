@@ -3,7 +3,7 @@ require("dotenv").config({ path: "../.env" });
 const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
 
-const settings = require("./session-settings.js")(process.env.NODE_ENV);
+const settings = require("./session-settings.js");
 const endpoints = require("./endpoints.js");
 const schemaLoader = require("./schemas");
 const { buildSession } = require("./session.js");
