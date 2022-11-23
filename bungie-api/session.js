@@ -67,20 +67,21 @@ async function validateSession(session){
                 "grant_type": "authorization_code",
                 "code": session._querycode
             }
-        }).then( (result) => session.authData(result.data))
+        }).then( (result) => session.authData = result.data)
+        .catch( (error) => Error(error));
     }
     let expire = session.tokenExpirations;
     if(Date.now() > expire.access){
         if(Date.now() > expire.refresh)
             return Promise.reject(new RefreshTokenExpired("Refresh token has expired, user will need to re-authenticate."));
-        console.log(axiosToken);
         await axiosToken.request({ 
             headers: {"X-API-Key": process.env.BUNGIE_API_KEY },
             data: {
                 "grant_type": "refresh_token",
                 "refresh_token": session._authdata.refresh_token
             }
-        }).then( (result) => session.authData(result.data));
+        }).then( (result) => session.authData = result.data)
+        .catch( (error) => Error(error));
     }
     return true;
 }
