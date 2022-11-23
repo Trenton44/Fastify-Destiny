@@ -20,10 +20,6 @@
     "generate-docs": "jsdoc -c ./jsdoc.json",
     "test": "jest"
   },
-  "jest": {
-    "verbose": true,
-    "preset": "@shelf/jest-mongodb"
-  },
   "devDependencies": {
     "@shelf/jest-mongodb": "^4.1.3",
     "docdash": "^1.2.0",
