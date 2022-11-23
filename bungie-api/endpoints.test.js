@@ -1,38 +1,22 @@
 require("dotenv").config({ path: ".env" });
 process.env.NODE_ENV="testing"
-const session = require("./session.js");
-const build = require("../app.js");
-const opts = require("../settings.js")(process.env.NODE_ENV);
-const app = build(opts);
+const { MongoClient } = require("mongodb");
+let connection = null;
+let db = null;
 
-jest.mock("./session.js", () => {
-    const original = jest.requireActual("./session.js");
-    return {
-        ...original,
-        buildSession: jest.fn(()=> {
-            let temp = original.buildSession();
-            temp.__querycode = true;
-            return temp;
-        }),
-        validateSession: jest.fn(async (session) => true), //completely skip validation
-        validateProfiles: jest.fn(async (request) => { //skip validation, but add a fake profile in to ensure / returns the correct value
-            request.session._user.active = "12345";
-            request.session._user.profiles = {
-                "12345": {
-                    "potato": "beans"
-                }
-            }
-        })
-    };
+beforeAll(async () => {
+    connection = await MongoClient.connect(process.env.MONGO_DB_URL, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    });
+    db = await connection.db();
 });
 
-test("endpoint '/' should return the active profile", async () => {
-    let result = await app.inject({
-        method: "GET",
-        url: "/"
-    });
-    expect(result.statusCode).toEqual(200);
-    expect(result.json()).toEqual({
-        "potato": "beans"
-    });
+test(" db connection is valid and exists.", () => {
+    expect(connection).not.toBe(false);
+    expect(db).not.toBe(false);
+    console.log(connection);
+    console.log(db);
 });
+
+afterAll(async () => await connection.close());

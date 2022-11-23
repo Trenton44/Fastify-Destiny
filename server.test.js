@@ -6,11 +6,15 @@ const build = require("./app.js");
 test(' server should fail to load if no ORIGIN env variable exists', () => {
     let origin = process.env.ORIGIN;
     delete process.env.ORIGIN;
-    expect(() => build(opts)).toThrow(Error);
+    let app = null;
+    expect(() => app = build(opts)).toThrow(Error);
     process.env.ORIGIN = origin;
 });
 
-test('Intializing production server should return the server object', () => {
+test('Intializing production server should return the server object', async () => {
     const opts = require("./settings.js")["production"];
-    expect(build(opts)).toBeInstanceOf(Object);
+    let app = build(opts);
+    expect(app).toBeInstanceOf(Object);
+    return app.close();
 });
+
