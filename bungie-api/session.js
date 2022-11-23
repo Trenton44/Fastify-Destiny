@@ -1,8 +1,8 @@
-const axios = require("axios");
 const { MapResponse } = require("./api.js");
-const { UserUnauthorized } = require("./errortypes.js");
+const { UserUnauthorized, RefreshTokenExpired } = require("./errortypes.js");
 
-const axiosToken = axios.create({
+
+const axiosToken = require("axios").create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
     method: "POST",
     data: new URLSearchParams({
@@ -34,7 +34,7 @@ function buildSession(store){
             profiles: this._user.profiles
         }},
         get accessToken(){ return this._authdata.access_token; },
-        get tokenExpiration(){
+        get tokenExpirations(){
             return {
                 access: this._authdata.access_expires,
                 refresh: this._authdata.refresh_expires
@@ -60,8 +60,8 @@ function buildSession(store){
 async function validateSession(session){
     if(!session.isLoggedIn){
         if(!session._querycode)
-            throw new UserUnauthorized("No auth data, and no query code, user is not authorized.");
-        await axiosToken.post("", { 
+            return Promise.reject(new UserUnauthorized("No auth data, and no query code, user is not authorized."));
+        await axiosToken.request({ 
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             data: {
                 "grant_type": "authorization_code",
@@ -69,11 +69,12 @@ async function validateSession(session){
             }
         }).then( (result) => session.authData(result.data))
     }
-    let expire = session.tokenExpiration;
+    let expire = session.tokenExpirations;
     if(Date.now() > expire.access){
         if(Date.now() > expire.refresh)
-            throw new UserUnauthorized("Refresh token has expired, user will need to re-authenticate.");
-        await axiosToken.post("", { 
+            return Promise.reject(new RefreshTokenExpired("Refresh token has expired, user will need to re-authenticate."));
+        console.log(axiosToken);
+        await axiosToken.request({ 
             headers: {"X-API-Key": process.env.BUNGIE_API_KEY },
             data: {
                 "grant_type": "refresh_token",
@@ -81,7 +82,7 @@ async function validateSession(session){
             }
         }).then( (result) => session.authData(result.data));
     }
-   return true;
+    return true;
 }
 async function validateProfiles(request){
     let session = request.session;

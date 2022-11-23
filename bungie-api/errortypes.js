@@ -8,4 +8,9 @@ class BungieUnavailable extends Error{
         super(...params);
     }
 }
-module.exports = { UserUnauthorized, BungieUnavailable };
+class RefreshTokenExpired extends Error{
+    constructor(type, ...params){
+        super(...params);
+    }
+}
+module.exports = { UserUnauthorized, BungieUnavailable, RefreshTokenExpired };
