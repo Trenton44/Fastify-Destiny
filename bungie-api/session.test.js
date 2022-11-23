@@ -7,8 +7,45 @@ const { RefreshTokenExpired, UserUnauthorized } = require("./errortypes.js");
 const { MongoClient } = require("mongodb");
 let mongocollection = null;
 
+function mockUserData() {
+    return {
+        language: "en",
+        membershipId: 213098549320,
+        active: 1209835432,
+        profiles: {
+            "1209835432": {
+                membershipId: "1209835432"
+            }
+        }
+    };
+}
+function mockAuthData(){
+    return {
+        access_token: 12934075490328762,
+        token_type: "Bearer",
+        expires_in: 10000,
+        refresh_token: 1029573930,
+        refresh_expires_in: 10000,
+        membership_id: 1902890850
+    };
+}
 
-
+describe("These tests validate the buildSession() functionality", () => {
+    const { buildSession } = require("./session.js");
+    const buildSessionMock = () => {
+        let temp = buildSession({
+            cookie: { maxAge: 20000 }
+        });
+        temp._user = mockUserData();
+        temp.authData = mockAuthData();
+    };
+    test("Running buildSession() should return a new session object", 
+        () => expect(buildSession()).not.toBe(buildSession())
+    );
+    test("Session language should default to 'en'",
+        () => expect(buildSession()._user.language).toEqual("en")
+    );
+});
 // need to figure out how to mock the axios instance, so all requests to the instance get mocked instead
 beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_DB_URL, {
@@ -20,11 +57,7 @@ beforeAll(async () => {
 });
 
 
-test("Running buildSession() should return a new session object", () => {
-    let one = session.buildSession();
-    let two = session.buildSession();
-    expect(one).not.toBe(two);
-});
+
 
 test("validateSession() returns RefreshTokenExpired error if bungie api rejects refresh token.", async () => {
     let mocksession = session.buildSession({
