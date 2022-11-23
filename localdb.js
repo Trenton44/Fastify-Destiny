@@ -1,5 +1,4 @@
 const { MongoMemoryServer } = require("mongodb-memory-server");
-require("dotenv");
 
 module.exports = MongoMemoryServer.create({
     instance: {

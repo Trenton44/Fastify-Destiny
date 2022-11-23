@@ -1,4 +1,3 @@
-require("dotenv").config({ path: "../.env" });
 const MongoStore = require("connect-mongo");
 //const express_session = require("express-session"); //connect-mongo requires this to be installed, but it is unused
 

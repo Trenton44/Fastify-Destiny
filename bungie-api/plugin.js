@@ -1,5 +1,3 @@
-
-require("dotenv").config({ path: "../.env" });
 const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
 

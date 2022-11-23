@@ -2,7 +2,6 @@ let mockAxios = jest.createMockFromModule("axios");
 jest.mock("axios", () => mockAxios);
 mockAxios.create = jest.fn(() => mockAxios); // session.js has internal axios.create instance. overriding it with mockAxios will allow us to mock it
 
-require("dotenv").config({ path: ".env" });
 const session = require("./session.js");
 const { RefreshTokenExpired, UserUnauthorized } = require("./errortypes.js");
 const { MongoClient } = require("mongodb");
