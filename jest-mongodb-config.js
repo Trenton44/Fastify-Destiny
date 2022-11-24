@@ -9,5 +9,6 @@ module.exports = {
       },
       autoStart: false,
     },
-    mongoURLEnvName: 'MONGO_DB_URL',
+    //NOTE: connecting to DB requires use of global.__MONGO_URI__, NOT process.env.MONGO_DB_URL
+    useSharedDBForAllJestWorkers: false,
   };
