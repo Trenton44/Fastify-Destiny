@@ -7,29 +7,6 @@ const { RefreshTokenExpired, UserUnauthorized } = require("./errortypes.js");
 const { MongoClient } = require("mongodb");
 let mongocollection = null;
 
-function mockUserData() {
-    return {
-        language: "en",
-        membershipId: 213098549320,
-        active: 1209835432,
-        profiles: {
-            "1209835432": {
-                membershipId: "1209835432"
-            }
-        }
-    };
-}
-function mockAuthData(){
-    return {
-        access_token: 12934075490328762,
-        token_type: "Bearer",
-        expires_in: 10000,
-        refresh_token: 1029573930,
-        refresh_expires_in: 10000,
-        membership_id: 1902890850
-    };
-}
-
 describe("These tests validate the buildSession() functionality", () => {
     const { buildSession } = require("./session.js");
     const buildSessionMock = () => {
@@ -46,18 +23,6 @@ describe("These tests validate the buildSession() functionality", () => {
         () => expect(buildSession()._user.language).toEqual("en")
     );
 });
-// need to figure out how to mock the axios instance, so all requests to the instance get mocked instead
-beforeAll(async () => {
-    connection = await MongoClient.connect(process.env.MONGO_DB_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    });
-    let db = await connection.db();
-    mongocollection = await db.collection(process.env.MONGO_DB_COLLECTION);
-});
-
-
-
 
 test("validateSession() returns RefreshTokenExpired error if bungie api rejects refresh token.", async () => {
     let mocksession = session.buildSession({
@@ -113,5 +78,4 @@ test("validateSession() should check for access token on requests and refresh th
     expect(mocksession.accessToken).toEqual(1239078735421);
     expect(mocksession._authdata.refresh_token).toEqual(12903958032);
     expect(mockAxios.request).toHaveBeenCalledTimes(1);
-    
-})
+});

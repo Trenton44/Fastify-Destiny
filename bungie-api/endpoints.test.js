@@ -1,24 +1,23 @@
 
-let db = null;
-let collection = null;
-
-beforeAll(async () => {
-    db = await connectDatabase();
-    collection = db.collection(process.env.MONGO_DB_COLLECTION);
+const { mockUserSession } = require("../test.functions.js");
+describe("These tests should verify functionality of session retrieval/access.", () => {
+    let db = null;
+    let collection = null;
+    beforeAll(async () => {
+        db = await connectDatabase(global.__MONGO_URI__);
+        collection = db.collection(process.env.MONGO_DB_COLLECTION);
+        process.env.MONGO_DB_URL = global.__MONGO_URI__;
+    });
+    beforeEach(() => {
+        //this will need to mock connect-mongo and return it's session data
+        db.collection.insertOne(mockUserSession());
+    });
+    afterEach(() => {
+        //wipe collection
+    });
+    afterAll(async () => closeDatabase(db));
 });
 
-afterAll(async () => closeDatabase(db));
 
-test("db connection is valid and exists.", () => {
-    expect(connection).not.toBe(false);
-    expect(db).not.toBe(false);
-});
 
-test("A user accessing / without authorization should receive a UserUnauthorized error.", () => {
-    expect(Promise.resolve("this test is built.")).rejects;
-});
-
-test("An authorized user accessing / should receive the active profile saved to the session.", () => {
-    expect(Promise.resolve("this test is built.")).rejects;
-});
 
