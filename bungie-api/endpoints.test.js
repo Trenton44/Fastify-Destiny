@@ -1,3 +1,6 @@
+const { mockUserSession, connectDatabase } = require("../test.functions.js");
+const request = require("supertest");
+process.env.MONGO_DB_URL = global.__MONGO_URI__;
 
 jest.mock("./session-settings.js", () => {
     //override the session id generator, to point to the mock session data.
@@ -10,33 +13,48 @@ jest.mock("./session-settings.js", () => {
             dbName: process.env.MONGO_DB_NAME,
             collectionName: process.env.MONGO_DB_COLLECTION,
             stringify: false,
-        })
+        }),
+        cookie: {
+            path: "/",
+            sameSite: "Strict",
+            httpOnly: false,
+            maxAge: 3600000,
+            secure: false,
+        }
     };
 });
-
-const { mockUserSession } = require("../test.functions.js");
+jest.mock("../settings.js", () => {
+    return jest.fn((env) => {
+        return {
+            trustProxy: false,
+            logger: true
+        };
+    });
+})
 describe("These tests should verify functionality of session retrieval/access.", () => {
+    let connection = null;
     let db = null;
     let collection = null;
-    const app = require("../app.js")(require("./settings.js")(process.env.NODE_ENV));
+    const app = require("../app.js")(require("../settings.js")(process.env.NODE_ENV));
     beforeAll(async () => {
-        db = await connectDatabase(global.__MONGO_URI__);
-        collection = db.collection(process.env.MONGO_DB_COLLECTION);
-        process.env.MONGO_DB_URL = global.__MONGO_URI__;
+        connection = await connectDatabase(global.__MONGO_URI__);
+        db = await connection.db();
+        collection = await db.collection(process.env.MONGO_DB_COLLECTION);
     });
-    beforeEach(() => {
-        app.inject
+    beforeEach(async () => {
         //this will need to mock connect-mongo and return it's session data
-        db.collection.insertOne(mockUserSession());
+        await collection.insertOne({
+            sessionId: "test12345",
+            data: "beans"
+        });
     });
-    test("validate that user session exists in the mongo DB.", async () => {
 
+    test("validate that user session exists in the mongo DB.", async () => {
+        expect(collection.findOne({ sessionId: "test12345" })).resolves.toBeInstanceOf(Object);
     });
-    afterEach(() => {
-        //wipe collection
-        db.collection.deleteMany({});
-    });
-    afterAll(async () => closeDatabase(db));
+
+    afterEach(async () => await collection.deleteMany({}));
+    afterAll(async () => await connection.close());
 });
 
 
