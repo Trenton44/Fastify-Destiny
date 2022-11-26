@@ -10,7 +10,8 @@
     "dotenv": "^16.0.2",
     "express-session": "^1.17.3",
     "fastify": "^4.8.1",
-    "mongodb-memory-server": "^8.10.0"
+    "mongodb-memory-server": "^8.10.0",
+    "supertest": "^6.3.1"
   },
   "scripts": {
     "start": "node server.js",
