@@ -1,4 +1,4 @@
-require("dotenv").config({ path: ".env.test" });
+require("dotenv").config({ path: ".env-test" });
 const { MongoClient } = require("mongodb");
 
 function mockUserData() {
@@ -35,12 +35,7 @@ async function connectDatabase(connectionString){
         useNewUrlParser: true,
         useUnifiedTopology: true,
     });
-    let db = await connection.db();
-    return db;
-}
-async function closeDatabase(db){
-    await db.close();
-    return true;
+    return connection;
 }
 
 function buildServer(){
@@ -48,4 +43,4 @@ function buildServer(){
     return require("./app.js")(opts);
 }
 
-module.exports = { connectDatabase, closeDatabase, mockUserSession };
+module.exports = { connectDatabase, mockUserSession, buildServer };

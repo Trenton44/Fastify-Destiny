@@ -1,6 +1,6 @@
 const { MapResponse } = require("./api.js");
 const { UserUnauthorized, RefreshTokenExpired } = require("./errortypes.js");
-
+const crypto = require("crypto");
 
 const axiosToken = require("axios").create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",

@@ -12,7 +12,6 @@ let envs = {
             },
         },
     },
-    testing: { trustProxy: true, },
     production: { trustProxy: true, },
 }
 

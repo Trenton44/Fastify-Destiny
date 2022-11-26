@@ -4,8 +4,6 @@ mockAxios.create = jest.fn(() => mockAxios); // session.js has internal axios.cr
 
 const session = require("./session.js");
 const { RefreshTokenExpired, UserUnauthorized } = require("./errortypes.js");
-const { MongoClient } = require("mongodb");
-let mongocollection = null;
 
 describe("These tests validate the buildSession() functionality", () => {
     const { buildSession } = require("./session.js");
