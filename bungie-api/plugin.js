@@ -1,5 +1,5 @@
-const session = require("@fastify/session");
 const cookie = require("@fastify/cookie");
+const session = require("@fastify/session");
 
 const settings = require("./session-settings.js");
 const endpoints = require("./endpoints.js");
@@ -17,10 +17,10 @@ module.exports = (fastify, options, next) => {
     fastify.decorateRequest("BClient", null); // Add a utility function for making requests to the api
     fastify.decorateRequest("InjectURI", InjectURIParameters);
     fastify.addHook("onRequest", async (request, reply) => {
-        // language var will be how we determine if session is new. if it doesn't exist, this is a new user.
+        // user var will be how we determine if session is new. if it doesn't exist, this is a new user.
         // stopgap until i find a way to properly detect new session instances
-        if(!request.session.language)
-            request.session = buildSession(request.session); // if no session already exists for user, create one
+        if(!request.session.user)
+            request.session.user = buildSession(request.session); // if no session already exists for user, create one
         request.BClient = buildAPIRequest();
     });
     fastify.register(endpoints);

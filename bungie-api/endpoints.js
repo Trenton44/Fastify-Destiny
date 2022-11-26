@@ -11,9 +11,9 @@ let general = (fastify, options, next) => {
 
 let user = (fastify, options, next) => {
     fastify.addHook('preHandler', async (request, reply) => {
-        return validateSession(request.session)
+        return validateSession(request.session.user)
         .then( (success) =>{
-            request.BClient.defaults.headers["Authorization"] = "Bearer "+request.session.accessToken;
+            request.BClient.defaults.headers["Authorization"] = "Bearer "+request.session.user.accessToken;
             return validateProfiles(request);
         })
         .catch( (error) => reply.code(400).send(error));
@@ -24,17 +24,17 @@ let user = (fastify, options, next) => {
         // if user receives a BungieUnavailable error, request failed at preHandler, because bungie is down
         // if user recieves a UserUnauthorized error, request failed at preHandler because user has not logged in
         // if user gets here, both api's are functional, return the active Profile.
-        return request.session.activeProfile;
+        return request.session.user.activeProfile;
     });
     fastify.get("/UserProfiles", async (request, reply) => {
-        return request.session.userProfiles;
+        return request.session.user.userProfiles;
     });
     fastify.post("/UserProfiles", async (request, reply) => {
         //code to validate request and update active user here.
     });
     fastify.get("/GetProfile", { schema: {"$ref": "/input/GetProfile#" } }, async (request, reply) => {
         const openapiuri = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
-        let profile = request.session.activeProfile;
+        let profile = request.session.user.activeProfile;
         let response = await request.BClient(
             request.InjectURI(openapiuri,{
                 membershipType: profile.membershipType,

@@ -57,20 +57,20 @@ function buildSession(store){
     }
 };
 
-async function validateSession(session){
-    if(!session.isLoggedIn){
-        if(!session._querycode)
+async function validateSession(user){
+    if(!user.isLoggedIn){
+        if(!user._querycode)
             return Promise.reject(new UserUnauthorized("No auth data, and no query code, user is not authorized."));
         await axiosToken.request({ 
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             data: {
                 "grant_type": "authorization_code",
-                "code": session._querycode
+                "code": user._querycode
             }
-        }).then( (result) => session.authData = result.data)
+        }).then( (result) => user.authData = result.data)
         .catch( (error) => Error(error));
     }
-    let expire = session.tokenExpirations;
+    let expire = user.tokenExpirations;
     if(Date.now() > expire.access){
         if(Date.now() > expire.refresh)
             return Promise.reject(new RefreshTokenExpired("Refresh token has expired, user will need to re-authenticate."));
@@ -78,39 +78,39 @@ async function validateSession(session){
             headers: {"X-API-Key": process.env.BUNGIE_API_KEY },
             data: {
                 "grant_type": "refresh_token",
-                "refresh_token": session._authdata.refresh_token
+                "refresh_token": user._authdata.refresh_token
             }
-        }).then( (result) => session.authData = result.data)
+        }).then( (result) => user.authData = result.data)
         .catch( (error) => Error(error));
     }
     return true;
 }
 async function validateProfiles(request){
-    let session = request.session;
-    if(session.activeProfile)
+    let user = request.session.user;
+    if(user.activeProfile)
         return true;
-    if(session.availableProfileIds.length != 0){
-        session.activeProfile = session.availableProfileIds[0];
+    if(user.availableProfileIds.length != 0){
+        user.activeProfile = user.availableProfileIds[0];
         return true;
     }
     // if here, there are no user profiles, we need to retrieve them from bungie
     const openapiurl = "/User/GetMembershipsById/{membershipId}/{membershipType}/";
     let uri = request.InjectURI(openapiurl, {
-        membershipId: session._user.membershipId,
+        membershipId: user._user.membershipId,
         membershipType: -1
     });
     let response = await request.BClient(uri)
-    .then( (resp) => MapResponse(resp, openapiurl, "UserData", session._user.language))
-    session._user.profiles = response.destinyMemberships;
-    session.activeProfile = response.primaryMembershipId ? 
-        response.primaryMembershipId : Object.keys(session.availableProfileIds)[0];
+    .then( (resp) => MapResponse(resp, openapiurl, "UserData", user._user.language))
+    user._user.profiles = response.destinyMemberships;
+    user.activeProfile = response.primaryMembershipId ? 
+        response.primaryMembershipId : Object.keys(user.availableProfileIds)[0];
     return true;
 }
 
 async function BungieLogin(request, reply){
     let redirect = new URL("https://www.bungie.net/en/OAuth/Authorize");
     let state = crypto.randomBytes(16).toString("base64");
-    request.session._state = state;
+    request.session.user._state = state;
     redirect.search = new URLSearchParams({
         client_id: process.env.BUNGIE_CLIENT_ID,
         response_type: "code",
@@ -120,12 +120,12 @@ async function BungieLogin(request, reply){
 }
 
 async function BungieLoginResponse(request, response){
-    let valid = request.session._state === decodeURIComponent(request.query.state);
+    let valid = request.session.user._state === decodeURIComponent(request.query.state);
     if(!valid){
         request.session.destroy();
         return reply.code(400).send({ error: "Invalid state parameter, user must re-authenticate." });
     }
-    request.session._querycode = request.query.code;
+    request.session.user._querycode = request.query.code;
     return reply.code(303).redirect(process.env.ORIGIN);
 }
 
