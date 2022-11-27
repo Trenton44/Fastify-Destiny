@@ -1,11 +1,11 @@
 const cookie = require("@fastify/cookie");
 const session = require("@fastify/session");
 
-const settings = require("./session-settings.js");
+const settings = require("./session_settings.js");
 const endpoints = require("./endpoints.js");
 const schemaLoader = require("./schemas");
-const { buildSession } = require("./session.js");
-const { buildAPIRequest } = require("./api.js");
+const sessionTemplate = require("./session.js");
+const axiosBungie = require("./api_request.js");
 
 module.exports = (fastify, options, next) => {
     for(schema in schemaLoader){
@@ -20,8 +20,8 @@ module.exports = (fastify, options, next) => {
         // user var will be how we determine if session is new. if it doesn't exist, this is a new user.
         // stopgap until i find a way to properly detect new session instances
         if(!request.session.user)
-            request.session.user = buildSession(request.session); // if no session already exists for user, create one
-        request.BClient = buildAPIRequest();
+            request.session.user = sessionTemplate(request.session); // if no session already exists for user, create one
+        request.BClient = axiosBungie();
     });
     fastify.register(endpoints);
     next();
