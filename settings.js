@@ -13,6 +13,7 @@ let envs = {
         },
     },
     production: { trustProxy: true, },
+    test: {}
 }
 
 module.exports = (env) => {
