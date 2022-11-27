@@ -1,5 +1,5 @@
 module.exports = {
     "verbose": true,
-    "setupFiles": ["./test.functions.js"],
+    "setupFiles": ["./testhelpers.js"],
     "preset": "@shelf/jest-mongodb",
 }
