@@ -1,5 +1,6 @@
 process.env.MONGO_DB_URL = global.__MONGO_URI__;
 jest.mock("./session_settings.js");
+
 let mongo = null;
 const app = global.buildServer();
 

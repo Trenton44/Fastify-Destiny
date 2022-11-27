@@ -2,7 +2,7 @@ const cookie = require("@fastify/cookie");
 const session = require("@fastify/session");
 
 const settings = require("./session_settings.js");
-const endpoints = require("./endpoints.js");
+const registerEndpoints = require("./endpoints.js");
 const schemaLoader = require("./schemas");
 const sessionTemplate = require("./session.js");
 const axiosBungie = require("./api_request.js");
@@ -23,7 +23,7 @@ module.exports = (fastify, options, next) => {
             request.session.user = sessionTemplate(request.session); // if no session already exists for user, create one
         request.BClient = axiosBungie();
     });
-    fastify.register(endpoints);
+    registerEndpoints(fastify);
     next();
 };
 
