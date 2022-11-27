@@ -64,4 +64,7 @@ module.exports = (request, reply) => {
         return validateProfiles(request);
     })
     .catch( (error) => reply.code(400).send(error));
-}
+};
+
+module.exports.validateProfiles = validateProfiles;
+module.exports.validateSession = validateSession;
