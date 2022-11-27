@@ -1,6 +1,6 @@
 const { connectDatabase } = require("../test.functions.js");
 const fastify = require("fastify");
-const { UserUnauthorized } = require("./errortypes");
+const { UserUnauthorized } = require("./errors");
 process.env.MONGO_DB_URL = global.__MONGO_URI__;
 
 jest.mock("./session-settings.js", () => {
@@ -21,12 +21,13 @@ jest.mock("./session-settings.js", () => {
         })
     };
 });
-jest.setTimeout(10000);
+
 let mongo = null;
 let db = null;
 let collection = null;
+let cookie = null;
 const app = fastify();
-const Bungie = require("./plugin.js");
+const Bungie = require("./fastify_plugin.js");
 app.register(Bungie);
 
 
@@ -35,38 +36,41 @@ beforeAll(async () => {
     db = await mongo.db(process.env.MONGO_DB_NAME);
     collection = await db.collection(process.env.MONGO_DB_COLLECTION);
 });
+
 beforeEach(async () => {});
-
-test("Accessing an endpoint should return a session cookie", async () => {
-    let request = await app.inject({
-        method: "GET",
-        url: "/"
+describe("Ensure that the session cookie is properly set and session data appears in the database.", () => {
+    test("Accessing an endpoint should return a session cookie", async () => {
+        let request = await app.inject({
+            method: "GET",
+            url: "/"
+        });
+        // validate that session cookie has been set.
+        expect(request.cookies).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    name: process.env.COOKIE_NAME
+                })
+            ])
+        );
     });
-    // validate that session cookie has been set.
-    expect(request.cookies).toEqual(
-        expect.arrayContaining([
-            expect.objectContaining({
-                name: process.env.COOKIE_NAME
-            })
-        ])
-    );
+    
+    test("Corresponding session should exist inside DB", async () => {
+        let ses = await collection.find().toArray();
+        expect(ses).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    _id: "test"+process.env.JEST_WORKER_ID
+                })
+            ])
+        );
+    });
+
+    afterAll(async () => await collection.deleteMany({}));
 });
 
-test("Corresponding session should exist inside DB", async () => {
-    let ses = await collection.find().toArray();
-    console.log(ses);
-    expect(ses).toEqual(
-        expect.arrayContaining([
-            expect.objectContaining({
-                _id: "test"+process.env.JEST_WORKER_ID
-            })
-        ])
-    );
-});
 
 
 //afterEach(async () => );
 afterAll(async () => {
-    await collection.deleteMany({});
     await mongo.close();
 });

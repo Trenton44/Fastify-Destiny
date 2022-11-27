@@ -6,7 +6,7 @@ const fastify = require('fastify');
 
 const cors = require("@fastify/cors");
 
-const Bungie = require("./bungie-api/plugin.js");
+const Bungie = require("./bungie-api/fastify_plugin.js");
 
 /**
  * Builds the fastify server, using provided options
