@@ -1,44 +1,25 @@
-process.env.MONGO_DB_URL = global.__MONGO_URI__;
-jest.mock("./session_settings.js");
-
-let mongo = null;
-const app = global.buildServer();
-
-beforeAll(async () => mongo = await global.connectDatabase(global.__MONGO_URI__));
-beforeEach(async () => {});
-
-describe("Ensure that the session cookie is properly set and session data appears in the database.", () => {
-    test("Accessing an endpoint should return a session cookie", async () => {
-        let request = await app.inject({
-            method: "GET",
-            url: "/"
-        });
-        // validate that session cookie has been set.
-        expect(request.cookies).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    name: process.env.COOKIE_NAME
-                })
-            ])
-        );
-    });
+const session = require("./session.js");
+test("session.js should always return a new object instance", 
+    () => expect(session()).not.toBe(session())
+);
+test("Session language should default to 'en'",
+    () => expect(session()._user.language).toEqual("en")
+);
+test("altering session._authdata with new data should update the session cookie's maxAge to reflect new refresh token expiration.", () => {
+    let sessionobj = {
+        cookie: {
+            maxAge: 3000
+        },
+    };
+    let mocksession = session(sessionobj);
+    sessionobj.user = mocksession;
     
-    test("Corresponding session should exist inside DB", async () => {
-        let ses = await mongo.collection.find().toArray();
-        expect(ses).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    _id: "test"+process.env.JEST_WORKER_ID
-                })
-            ])
-        );
-    });
-
-    afterAll(async () => await mongo.collection.deleteMany({}));
-});
-
-afterEach(async () => {});
-afterAll(async () => {
-    await app.close();
-    await mongo.client.close();
+    mocksession.authData = {
+        access_token: 12345,
+        token_type: "access",
+        expires_in: 10000,
+        refresh_token: 12467,
+        refresh_expires_in: 124567
+    };
+    expect(sessionobj.cookie.maxAge).toEqual(mocksession._authdata.refresh_expires);
 });
