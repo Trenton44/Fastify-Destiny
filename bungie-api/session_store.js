@@ -1,7 +1,6 @@
 const MongoStore = require("connect-mongo");
-//const express_session = require("express-session"); //connect-mongo requires this to be installed, but it is unused
 
-const mongostore = {
+const options = {
     mongoUrl: process.env.MONGO_DB_URL,
     dbName: process.env.MONGO_DB_NAME,
     collectionName: process.env.MONGO_DB_COLLECTION,
@@ -22,18 +21,4 @@ const mongostore = {
     }
 };
 
-const options = {
-    secret: process.env.SESSION_STORE_SECRET,
-    cookieName: process.env.COOKIE_NAME,
-    saveUninitialized: true,
-    cookie: {
-        path: "/",
-        maxAge: 3600000, //1 Hour in milliseconds
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-    },
-    store: MongoStore.create(mongostore)
-};
-
-module.exports = options;
+module.exports = MongoStore.create(options);
