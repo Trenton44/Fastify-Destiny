@@ -1,3 +1,5 @@
+const { UserUnauthorized, RefreshTokenExpired } = require("./errors.js");
+
 const axiosToken = require("axios").create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
     method: "POST",
