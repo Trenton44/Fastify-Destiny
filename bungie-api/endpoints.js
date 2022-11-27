@@ -1,5 +1,4 @@
-const { CheckSessionAuthorized, BungieLogin, BungieLoginResponse } = require("./session");
-const MapResponse = require("./api.js");
+const CheckSessionAuthorized = require("./session_auth.js");
 
 let general = (fastify, options, next) => {
     fastify.get("/*", async (request, reply) => reply.code(404).send({ error: "Endpoint not found." }));
