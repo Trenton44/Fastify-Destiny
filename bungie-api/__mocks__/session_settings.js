@@ -1,6 +1,6 @@
 module.exports = {
     ...jest.requireActual("../session_settings.js"),
-    idGenerator: jest.fn((request) => "test"+process.env.JEST_WORKER_ID),
+    idGenerator: jest.fn((request) => global.sessionID(process.env.JEST_WORKER_ID)),
     cookie: {
         path: "/",
         maxAge: 3600000,

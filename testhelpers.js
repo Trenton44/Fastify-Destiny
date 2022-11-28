@@ -1,6 +1,8 @@
 require("dotenv").config({ path: ".env-test" });
 const { MongoClient } = require("mongodb");
 
+global.sessionID = (jestWorkerId) => "test"+jestWorkerId;
+
 global.connectDatabase = async (connectionString) => {
     let connection = await MongoClient.connect(connectionString, {
         useNewUrlParser: true,

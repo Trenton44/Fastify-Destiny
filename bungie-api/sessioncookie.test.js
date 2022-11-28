@@ -28,7 +28,7 @@ describe("Ensure that the session cookie is properly set and session data appear
         expect(ses).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
-                    _id: "test"+process.env.JEST_WORKER_ID
+                    _id: global.sessionID(process.env.JEST_WORKER_ID)
                 })
             ])
         );
