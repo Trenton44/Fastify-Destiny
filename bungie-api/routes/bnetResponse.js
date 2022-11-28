@@ -1,9 +1,6 @@
 module.exports = {
     method: "GET",
     url: "/bnetResponse",
-    schema: {
-        "$ref": "/input/GetProfile#" 
-    },
     handler: GET
 };
 

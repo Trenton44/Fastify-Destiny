@@ -4,7 +4,7 @@ module.exports = (store) => {
         _user: {
             language: "en",
             membershipId: false,
-            active: false,
+            active: null,
             profiles: {}
         },
         get language(){ return this._user.language; },
