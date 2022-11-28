@@ -8,7 +8,15 @@ module.exports = {
     post: {
         method: "POST",
         url: "/UserProfiles",
-        schema: {},
+        schema: {
+            "query": { 
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                    "id": { "type": "integer" }
+                }
+            }
+        },
         handler: POST
     }
 };

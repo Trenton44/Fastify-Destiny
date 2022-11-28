@@ -2,7 +2,23 @@ module.exports = {
     method: "GET",
     url: "/GetProfile",
     schema: {
-        "$ref": "/input/GetProfile#" 
+        "query": {
+            "type": "object",
+            "required": ["components"],
+            "properties":{
+                "components": { 
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": { 
+                        "oneOf": [
+                            { "type": "number" },
+                            { "type": "string" }
+                        ]
+                    }
+                },
+                "sortBy": { "type": "string" }
+            }
+        }
     },
     handler: GET
 }
