@@ -1,7 +1,13 @@
 const MongoStore = require("connect-mongo");
+const { MongoClient } = require("mongodb");
 
-const options = {
-    mongoUrl: process.env.MONGO_DB_URL,
+const mongoConnection = MongoClient.connect(process.env.MONGO_DB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+});
+
+module.exports = MongoStore.create({
+    client: mongoConnection,
     dbName: process.env.MONGO_DB_NAME,
     collectionName: process.env.MONGO_DB_COLLECTION,
     stringify: false,
@@ -19,6 +25,4 @@ const options = {
         iv_size: process.env.CRYTPO_IV_SIZE,
         at_size: process.env.CRYPTO_AT_SIZE
     }
-};
-
-module.exports = MongoStore.create(options);
+});

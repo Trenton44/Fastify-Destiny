@@ -1,5 +1,21 @@
 module.exports = (store) => {
     return {
+        secret: process.env.SESSION_STORE_SECRET,
+        cookieName: process.env.COOKIE_NAME,
+        saveUninitialized: true,
+        cookie: {
+            path: "/",
+            maxAge: 3600000, //1 Hour in milliseconds
+            httpOnly: true,
+            secure: true,
+            sameSite: "None",
+        },
+        store: store
+    };
+};
+
+module.exports.template = (session) => {
+    return {
         _authdata: {},
         _user: {
             language: "en",
@@ -36,7 +52,7 @@ module.exports = (store) => {
                 refresh_expires: Date.now() + data.refresh_expires_in
             }
             this._user.membershipId = data.membership_id;
-            store.cookie.maxAge = this._authdata.refresh_expires;
+            session.cookie.maxAge = this._authdata.refresh_expires;
         },
         get logout(){
             // TODO
