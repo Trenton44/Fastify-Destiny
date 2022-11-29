@@ -7,7 +7,7 @@ const UserProfiles = require("./routes/UserProfiles.js");
 const GetProfile = require("./routes/GetProfile.js");
 
 function GeneralRoutes(fastify, options, next){
-    fastify.all("/*", (request, reply) => reply.code(404).send({ error: "Endpoint not found." }));
+    fastify.get("/*", (request, reply) => reply.code(404).send({ error: "Endpoint not found." }));
     fastify.route(login);
     fastify.route(BnetResponse);
     next();
