@@ -1,8 +1,8 @@
 module.exports = {
     //"verbose": true,
     "testEnvironment": "node",
-    "setupFiles": ["./testEnvSetup.js"],
-    "setupFilesAfterEnv": ["./testSuiteSetup.js"],
-    "globalSetup": "./testSetup.js",
-    "globalTeardown": "./testTeardown.js"
+    "setupFiles": ["./jest_env_setup.js"],
+    "setupFilesAfterEnv": ["./jest_suite_setup.js"],
+    "globalSetup": "./jest_global_setup.js",
+    "globalTeardown": "./jest_global_teardown.js"
 };
