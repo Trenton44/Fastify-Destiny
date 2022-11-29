@@ -8,8 +8,6 @@ module.exports = {
       skipMD5: true,
     },
     autoStart: false,
-    instance: {
-      dbName: "sessions"
-    },
+    instance: {},
   },
 };

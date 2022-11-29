@@ -1,0 +1,3 @@
+require("dotenv").config({ path: ".env-test" });
+process.env.MONGO_DB_COLLECTION = process.env.MONGO_DB_COLLECTION+process.env.JEST_WORKER_ID; // change MONGO_DB_COLLECTION env variable to worker-specific value. each worker(and by extension, test suite) should have it's own collection for testing this way.
+global.sessionID = "test"+process.env.JEST_WORKER_ID; // Used to replace session store's idGenerator function, to make accessing session data in mongodb easy.
