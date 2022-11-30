@@ -5,6 +5,8 @@ module.exports = {
 };
 
 async function GET(request, reply){
+    //console.log(request);
+
     let valid = request.session.user._state === decodeURIComponent(request.query.state);
     if(!valid){
         await request.session.destroy();

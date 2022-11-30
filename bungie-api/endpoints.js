@@ -1,4 +1,4 @@
-const CheckSessionAuthorized = require("./session_auth.js");
+const CheckSessionAuthorized = require("./session/auth.js");
 
 const login = require("./routes/login.js");
 const BnetResponse = require("./routes/bnetResponse.js");

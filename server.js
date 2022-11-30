@@ -6,7 +6,8 @@ const opts = require("./settings.js")(process.env.NODE_ENV);
 
 // spin up a local mongodb database for development purposes
 if(process.env.NODE_ENV == "development"){
-    require("./localdb.js").then( (db) => {
+    const mongoServer = require("./mongodb_memory_server.js");
+    mongoServer.then( (db) => {
         process.env.MONGO_DB_URL = db.getUri();
         let host = startServer();
         host.addHook("onClose", () => db.stop());
