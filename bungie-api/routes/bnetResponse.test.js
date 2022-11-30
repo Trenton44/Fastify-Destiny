@@ -8,8 +8,18 @@
 jest.mock("../session_store.js");
 jest.mock("../session.js");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-let cookie = null;
-const setCookie = (cookies) => cookie = cookies.find( element => element.name == process.env.COOKIE_NAME);
+let cookie = {};
+const setCookie = (cookies) => {
+    cookie = cookies.find(element => element.name == process.env.COOKIE_NAME);
+    cookie.expires = cookie.expires.toISOString();
+    let temp = "";
+    Object.entries(cookie).forEach(([key, value], index) => {
+        temp = temp.concat(key+"="+value);
+        if(Object.keys(cookie).length - 1 > index)
+            temp = temp.concat("; ");
+    });
+    cookie = temp;
+}
 beforeEach(async () => {
     //ping an endpoint to create the session and get the cookie
     let result = await global.App.inject({
@@ -30,7 +40,7 @@ test("Recieving an invalid _state parameter should destroy the session and retur
         method: "GET",
         url: "/bnetResponse",
         query: { state: encodeURIComponent(invalidstate) },
-        cookies: { cookie }
+        headers: { Cookie:cookie }
     });
     expect(result.statusCode).toEqual(400);
     let ses = await global.MongoCollection.findOne({ _id: global.sessionID });
@@ -39,23 +49,25 @@ test("Recieving an invalid _state parameter should destroy the session and retur
 
 test.only("Receiving a valid state parameter should return 303 redirect", async () => {
     let currentstate = await global.MongoCollection.findOne({ _id: global.sessionID });
-    console.log(currentstate);
-    console.log(cookie);
+    //console.log(currentstate);
+    //console.log(cookie);
     currentstate = currentstate.session.user._state;
     expect(currentstate).toBeTruthy();
     expect(cookie).toBeTruthy();
-    
+    Object.entries(cookie).forEach(([key, value]) => {
+        encodeURIComponent(value);
+    })
     let result = await global.App.inject({
-        authority: "127.0.0.1",
+        authority: "http://127.0.0.1",
         method: "GET",
         url: "/bnetResponse",
         query: { state: encodeURIComponent(currentstate) },
-        cookies: cookie
+        headers: { Cookie: cookie }
     });
-
+    //console.log(result);
     setCookie(result.cookies);
     // query needs to be encoded
     expect(result.statusCode).toEqual(303);
 });
 
-afterEach(async () => await global.MongoCollection.deleteMany({}));
+//afterEach(async () => await global.MongoCollection.deleteMany({}));
