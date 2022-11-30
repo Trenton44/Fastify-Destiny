@@ -10,7 +10,7 @@ module.exports = MongoStore.create({
     client: mongoConnection,
     dbName: process.env.MONGO_DB_NAME,
     collectionName: process.env.MONGO_DB_COLLECTION,
-    stringify: false,
+    stringify: true,
     mongoOptions: {
         ssl: true,
         sslCert: process.env.HTTPS_CERT_PATH,
