@@ -26,13 +26,9 @@ module.exports = class UserSession {
         active: this.data._user.active,
         profiles: this.data._user.profiles
     }}
-    get accessToken(){ console.log(this.data._authdata.access); return this.data._authdata.access_token; }
-    get tokenExpirations(){
-        return {
-            access: this.data._authdata.access_expires,
-            refresh: this.data._authdata.refresh_expires
-        };
-    }
+    get accessToken(){ return this.data._authdata.access_token; }
+    get accessExpires(){ return this.data._authdata.access_expires; }
+    get refreshExpries(){ return this.data._authdata.refresh_expires; }
     set authData(data){
         this.data._authdata = {
             access_token: data.access_token,
