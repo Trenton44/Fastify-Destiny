@@ -48,15 +48,12 @@ const updateTokens = async (user) => {
 };
 
 const GetUserProfile = async (request) => {
-    let data = await request.BClient( "/User/GetMembershipsById/{membershipId}/{membershipType}/",
-        {
+    let data = await request.BClient("/User/GetMembershipsById/{membershipId}/{membershipType}/", {
+        params: {
             membershipId: request.session.data.userID,
             membershipType: -1
-        }, 
-        request.session.data.language, 
-        request.session.data.accessToken)
-    .catch((error) => Promise.reject(error));
-
+        }
+    }).catch((error) => Promise.reject(error));
     request.session.data.userProfiles = data.destinyMemberships;
     request.session.data.activeProfile = data.primaryMembershipId ? data.primaryMembershipId : setDefaultProfile(request.session.data);
     return true;
@@ -70,6 +67,7 @@ module.exports = async (request, reply) => {
     let userdata = request.session.data;
     await LoginInitiated(userdata);
     await updateTokens(userdata);
+    request.BClient.defaults.headers.Authorization = "Bearer "+ request.session.data.accessToken;
     await UserExists(request);
 };
 if(process.env.NODE_ENV == "test"){
