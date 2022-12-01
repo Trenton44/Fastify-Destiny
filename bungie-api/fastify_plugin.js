@@ -3,7 +3,7 @@ const session = require("@fastify/session");
 
 const sessionStore = require("./session/store.js");
 const sessionOptions = require("./session/settings.js")(sessionStore);
-const SessionClass = require("./session/user.js");
+const SessionClass = require("./session/UserSession.js");
 
 const registerEndpoints = require("./endpoints.js");
 const schemaLoader = require("./schemas");

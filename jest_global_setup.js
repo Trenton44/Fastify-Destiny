@@ -3,7 +3,7 @@ const { MongoClient } = require("mongodb");
 
 module.exports = async function(globalConfig, projectConfig){
     console.log();
-    globalThis.__MONGOSERVER__ = await require("./mongodb_memory_server.js")(3005).catch( (error) => Error(error));
+    globalThis.__MONGOSERVER__ = await require("./mongodb_memory_server.js").catch( (error) => Error(error));
     console.log("Mongo Server created successfully.");
 
     process.env.MONGO_DB_URL = globalThis.__MONGOSERVER__.getUri();
