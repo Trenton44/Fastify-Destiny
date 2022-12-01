@@ -7,11 +7,11 @@ module.exports = {
 async function GET(request, reply){
     //console.log(request);
 
-    let valid = request.session.user._state === decodeURIComponent(request.query.state);
+    let valid = request.session.data.data._state === decodeURIComponent(request.query.state);
     if(!valid){
         await request.session.destroy();
         return reply.code(400).send(Error("Invalid state parameter, user must re-authenticate."));
     }
-    request.session.user._querycode = request.query.code;
+    request.session.data.data._querycode = request.query.code;
     return reply.code(303).redirect(process.env.ORIGIN);
 }

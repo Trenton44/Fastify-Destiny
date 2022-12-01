@@ -2,10 +2,9 @@ const template = require("./template.js");
 
 module.exports = class UserSession {
     constructor(data){ 
-        if(!data)
-            console.log("User has no existing data, new user.");
         // Base template if this is a new user, user data if it exists.
-        this.data = !data ? template : data; 
+        this.newUser = !data;
+        this.data = !data ? template() : data; 
     }
     toJSON(){ return this.data; }
     get language(){ return this.data._user.language; }
@@ -20,15 +19,17 @@ module.exports = class UserSession {
             return true; // only reaches here if a profile exists
         return false;
     }
-    get activeProfile(){ return this.data._user.profiles[this.data._user.active]; }
+    get userID(){ return this.data._user.membershipId; }
+    get activeProfile(){ return this.data._user.profiles[this.data._user.active];  }
     set activeProfile(id){ this.data._user.active = id; }
     get userProfiles(){ return {
         active: this.data._user.active,
         profiles: this.data._user.profiles
     }}
+    set userProfiles(value){ this.data._user.profiles = value; }
     get accessToken(){ return this.data._authdata.access_token; }
     get accessExpires(){ return this.data._authdata.access_expires; }
-    get refreshExpries(){ return this.data._authdata.refresh_expires; }
+    get refreshExpires(){ return this.data._authdata.refresh_expires; }
     set authData(data){
         this.data._authdata = {
             access_token: data.access_token,

@@ -1,5 +1,5 @@
-jest.mock("./session_store.js");
-jest.mock("./session.js");
+jest.mock("./session/store.js");
+jest.mock("./session/settings.js");
 
 let cookies = null;
 beforeAll(async () => {
