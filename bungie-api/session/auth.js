@@ -12,10 +12,8 @@ const axiosToken = axios.create({
     ]
 });
 
-const setDefaultProfile = (userdata) => {
-    let keys = Object.keys(userdata.data._user.profiles);
-    let profiles = userdata.data._user.profiles;
-    userdata.activeProfile = profiles[keys[0]].destinyMembershipId;
+const setDefaultProfile = (user) => {
+    user.activeProfile = user.userProfiles[Object.keys(user.userProfiles)[0]].destinyMembershipId;
     return true;
 };
 
@@ -41,7 +39,7 @@ const updateTokens = async (user) => {
             headers: {"X-API-Key": process.env.BUNGIE_API_KEY },
             data: {
                 "grant_type": "refresh_token",
-                "refresh_token": user.data._authdata.refresh_token
+                "refresh_token": user.refreshToken
             }
         }).then((result) => {
             user.authData = result.data;

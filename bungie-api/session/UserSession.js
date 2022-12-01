@@ -22,12 +22,10 @@ module.exports = class UserSession {
     get userID(){ return this.data._user.membershipId; }
     get activeProfile(){ return this.data._user.profiles[this.data._user.active];  }
     set activeProfile(id){ this.data._user.active = id; }
-    get userProfiles(){ return {
-        active: this.data._user.active,
-        profiles: this.data._user.profiles
-    }}
+    get userProfiles(){ return this.data._user.profiles; }
     set userProfiles(value){ this.data._user.profiles = value; }
     get accessToken(){ return this.data._authdata.access_token; }
+    get refreshToken() { return this.data_authdata.refresh_token; }
     get accessExpires(){ return this.data._authdata.access_expires; }
     get refreshExpires(){ return this.data._authdata.refresh_expires; }
     set authData(data){
@@ -37,11 +35,9 @@ module.exports = class UserSession {
             access_expires: Date.now() + data.expires_in,
             refresh_token: data.refresh_token,
             refresh_expires: Date.now() + data.refresh_expires_in
-        }
+        };
         this.data._user.membershipId = data.membership_id;
         //session.cookie.maxAge = this.data._authdata.refresh_expires;
     }
-    get logout(){
-        // TODO
-    }
+    get logout(){}
 };
