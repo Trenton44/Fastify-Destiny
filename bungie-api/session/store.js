@@ -1,5 +1,6 @@
 const MongoStore = require("connect-mongo");
 const { MongoClient } = require("mongodb");
+const UserSession = require("./UserSession.js");
 
 const mongoConnection = MongoClient.connect(process.env.MONGO_DB_URL, {
     useNewUrlParser: true,
@@ -10,7 +11,15 @@ module.exports = MongoStore.create({
     client: mongoConnection,
     dbName: process.env.MONGO_DB_NAME,
     collectionName: process.env.MONGO_DB_COLLECTION,
-    stringify: true,
+    stringify: false,
+    serialize: (session) => { 
+        session.data = session.data.toJSON();
+        return session;
+    },
+    unserialize: (session) => { 
+        session.data = new UserSession(session.data); 
+        return session;
+    },
     mongoOptions: {
         ssl: true,
         sslCert: process.env.HTTPS_CERT_PATH,
