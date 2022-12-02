@@ -16,6 +16,7 @@ module.exports = async function(globalConfig, projectConfig){
     console.log("Connection to mongo server established.");
 
     globalThis.__MONGODB__ = await globalThis.__MONGOCONNECT__.db(process.env.MONGO_DB_NAME);
+    await globalThis.__MONGODB__.command({ ping: 1 }); // forces wait until db is accessible
     console.log("Connection to DB "+process.env.MONGO_DB_NAME+" successful.");
     
     return true;
