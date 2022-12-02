@@ -1,9 +1,8 @@
 const guide = require("./utils/json-traverse.js");
-const getConfig = require("./configs/index.js");
 
-module.exports = (response, openAPILink, endpoint, userlanguage) => {
-    let config = getConfig(endpoint);
+module.exports = function(data, uri, config, language){
+    if(!config || !data || !uri)
+        throw Error("You need to pass the required arguments.");
     let respschema = guide.findPath(oalink);
-    let data = new DataMap(config, userlang).map(response.data, respschema);
-    return data;
+    return config == {} ? data : new DataMap(config, userlang).map(response.data, respschema);
 }
