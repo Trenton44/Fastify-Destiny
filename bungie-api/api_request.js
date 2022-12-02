@@ -1,9 +1,5 @@
 const axios = require("axios");
-const BungieResponse = require("./api_response.js");
 
-// change to search for parameter string in uri
-// if found, THEN replace string and delete parameter
-// leave non-uri parameters untouched.
 function InjectURIParameters(uri, parameters){
     for(let parameter in parameters){
         const searchString = "{"+parameter+"}";
