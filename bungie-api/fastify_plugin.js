@@ -18,7 +18,6 @@ module.exports = (fastify, options, next) => {
     fastify.register(session, sessionOptions); // register session storage for bungie api.
     fastify.decorateRequest("BClient", null); // Add a utility function for making requests to the api
     fastify.addHook("onRequest", async (request, reply) => {
-        console.log(request.session);
         if(!request.session.data)
             request.session.data = new UserSession();
         request.BClient = axiosBungie();
