@@ -25,7 +25,7 @@ module.exports = class UserSession {
     get userProfiles(){ return this.data._user.profiles; }
     set userProfiles(value){ this.data._user.profiles = value; }
     get accessToken(){ return this.data._authdata.access_token; }
-    get refreshToken() { return this.data_authdata.refresh_token; }
+    get refreshToken() { return this.data._authdata.refresh_token; }
     get accessExpires(){ return this.data._authdata.access_expires; }
     get refreshExpires(){ return this.data._authdata.refresh_expires; }
     set authData(data){
