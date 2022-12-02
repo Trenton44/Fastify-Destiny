@@ -1,7 +1,7 @@
 const template = require("./template.js");
 
 test("template module returns an object.", 
-    () => expect(template()).toBeInstanceof(Object)
+    () => expect(template()).toBeInstanceOf(Object)
 );
 test("template should always give a new object instance.", () => {
     let temp = template();

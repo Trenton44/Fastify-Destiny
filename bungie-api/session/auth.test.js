@@ -43,6 +43,7 @@ describe("These tests verify the functionality of UserExists().", () => {
     );
     
     test("If no active profile exists, but user does have a profile, UserExists() calls setDefaultProfile().", () => {
+        expect(true).toEqual(false);
     });
     
     test("If user has no profiles, UserExists() makes a request to the Bungie API.", async () => {
@@ -63,7 +64,7 @@ describe("These tests verify the functionality of UserExists().", () => {
         expect(apirequest).toHaveBeenCalledTimes(1);
         expect(mockRequest.session.data.data._user.active).toEqual(mockAPIRequest.primaryMembershipId);
         expect(mockRequest.session.data.activeProfile).toEqual(mockAPIRequest.destinyMemberships[mockAPIRequest.primaryMembershipId]);
-        expect(mockRequest.session.data.userProfiles.profiles).toEqual(mockAPIRequest.destinyMemberships);
+        expect(mockRequest.session.data.userProfiles).toEqual(mockAPIRequest.destinyMemberships);
     });
 
     afterEach(() => jest.clearAllMocks());

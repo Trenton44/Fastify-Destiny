@@ -5,8 +5,9 @@
     if _state parameter is validated, request correctly stores query code into user session
     valid request correctly returns a 303 redirect to page stored in ORIGIN env variable
 */
-jest.mock("../session_store.js");
-jest.mock("../session.js");
+jest.mock("../session/store.js");
+jest.mock("../session/settings.js");
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cookie = {};
 const setCookie = (cookies) => {
@@ -32,7 +33,8 @@ beforeEach(async () => {
 
 test("Recieving an invalid _state parameter should destroy the session and return a 400 error.", async () => {
     let invalidstate = "astateparameterthatshouldnotmatch";
-    let currentstate = await global.MongoCollection.findOne({ _id: global.sessionID }).session.user._state;
+    let currentstate = await global.MongoCollection.findOne({ _id: global.sessionID });
+    currentstate = currentstate.session.data._state;
     expect(currentstate).not.toEqual(invalidstate);
 
     let result = await global.App.inject({
@@ -40,7 +42,7 @@ test("Recieving an invalid _state parameter should destroy the session and retur
         method: "GET",
         url: "/bnetResponse",
         query: { state: encodeURIComponent(invalidstate) },
-        headers: { Cookie:cookie }
+        headers: { Cookie: cookie }
     });
     expect(result.statusCode).toEqual(400);
     let ses = await global.MongoCollection.findOne({ _id: global.sessionID });
@@ -49,14 +51,13 @@ test("Recieving an invalid _state parameter should destroy the session and retur
 
 test.only("Receiving a valid state parameter should return 303 redirect", async () => {
     let currentstate = await global.MongoCollection.findOne({ _id: global.sessionID });
-    //console.log(currentstate);
-    //console.log(cookie);
-    currentstate = currentstate.session.user._state;
+    currentstate = currentstate.session.data._state;
     expect(currentstate).toBeTruthy();
     expect(cookie).toBeTruthy();
     Object.entries(cookie).forEach(([key, value]) => {
         encodeURIComponent(value);
-    })
+    });
+    console.log(cookie);
     let result = await global.App.inject({
         authority: "http://127.0.0.1",
         method: "GET",
@@ -64,10 +65,10 @@ test.only("Receiving a valid state parameter should return 303 redirect", async 
         query: { state: encodeURIComponent(currentstate) },
         headers: { Cookie: cookie }
     });
-    //console.log(result);
-    setCookie(result.cookies);
-    // query needs to be encoded
     expect(result.statusCode).toEqual(303);
+    expect(result.cookies.length).toEqual(1);
+    setCookie(result.cookies);
+    
 });
 
 //afterEach(async () => await global.MongoCollection.deleteMany({}));
