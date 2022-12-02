@@ -35,16 +35,7 @@ const axiosBase = {
     }
 };
 
-
-
-
-module.exports = async (schemauri, parameters, language, token=null, config=null) => {
-    let options = !token ? {} : { headers:{ "Authorization": "Bearer "+ token } };
-    let data = await axiosBungie.get(uri, options).catch((error) => Promise.reject(error));
-    return !config ? data : BungieResponse(data, schemauri, config, language);
-};
-
-module.exports = () => {
+module.exports = function () {
     let axiosBungie = axios.create(axiosBase);
     axiosBungie.interceptors.request.use(SetupRequest);
     axiosBungie.interceptors.response.use(HTMLInterceptor);
