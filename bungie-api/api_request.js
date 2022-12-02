@@ -16,15 +16,14 @@ function InjectURIParameters(uri, parameters){
 }
 
 const HTMLInterceptor = (response) => {
-    return response.headers["content-type"] !== "application/json" ? Promise.reject("Bungie Service is currently unavailable") 
-        : response.data.ErrorCode != 1 ? Promise.reject(response.data.ErrorStatus)
-        : response;
+    return response.headers["content-type"] !== "application/json; charset=utf-8" ? Promise.reject("Bungie Service is currently unavailable") 
+    : response.data.ErrorCode != 1 ? Promise.reject(response.data.ErrorStatus)
+    : response;
 };
 
 const SetupRequest = (request) => {
     request.url = InjectURIParameters(request.url, request.params);
-    console.log(request);
-    Promise.reject("No.");
+    return request;
 }
 
 const axiosBase = {
