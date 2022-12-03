@@ -1,10 +1,10 @@
-const CheckSessionAuthorized = require("./session/auth.js");
+import CheckSessionAuthorized from "./session/auth.js";
 
-const login = require("./routes/login.js");
-const BnetResponse = require("./routes/bnetResponse.js");
-const root = require("./routes/root.js");
-const UserProfiles = require("./routes/UserProfiles.js");
-const GetProfile = require("./routes/GetProfile.js");
+import login from "./routes/login.js";
+import BnetResponse from "./routes/bnetResponse.js";
+import root from "./routes/root.js";
+import UserProfiles from "./routes/UserProfiles.js";
+import GetProfile from "./routes/GetProfile.js";
 
 function GeneralRoutes(fastify, options, next){
     fastify.get("/*", (request, reply) => reply.code(404).send({ error: "Endpoint not found." }));
@@ -22,7 +22,7 @@ function AuthorizedRoutes(fastify, options, next) {
     next();
 };
 
-module.exports = (fastify) => {
+export default function(fastify) {
     fastify.register(GeneralRoutes);
     fastify.register(AuthorizedRoutes);
-}
+};

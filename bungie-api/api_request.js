@@ -1,4 +1,4 @@
-const axios = require("axios");
+import { default as axios } from "axios";
 
 function InjectURIParameters(uri, parameters){
     for(let parameter in parameters){
@@ -30,7 +30,7 @@ const axiosBase = {
     }
 };
 
-module.exports = function () {
+export default function() {
     let axiosBungie = axios.create(axiosBase);
     axiosBungie.interceptors.request.use(SetupRequest);
     axiosBungie.interceptors.response.use(HTMLInterceptor);

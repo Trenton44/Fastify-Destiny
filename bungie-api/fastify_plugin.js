@@ -1,19 +1,17 @@
-const cookie = require("@fastify/cookie");
-const session = require("@fastify/session");
+import cookie from "@fastify/cookie";
+import session from "@fastify/session";
 
-const sessionStore = require("./session/store.js");
-const sessionOptions = require("./session/settings.js")(sessionStore);
-const SessionClass = require("./session/UserSession.js");
+import sessionOptions from "./session/settings.js";
 
-const registerEndpoints = require("./endpoints.js");
-const schemaLoader = require("./schemas");
-const axiosBungie = require("./api_request.js");
-const UserSession = require("./session/UserSession.js");
+import registerEndpoints from "./endpoints.js";
+//const schemaLoader = require("./schemas");
+import axiosBungie from "./api_request.js";
+import UserSession from "./session/UserSession.js";
 
-module.exports = (fastify, options, next) => {
-    for(schema in schemaLoader){
+export default function (fastify, options, next) {
+    /*for(schema in schemaLoader){
         fastify.addSchema(schemaLoader[schema]);
-    }
+    }*/
     fastify.register(cookie); // register cookie to be used with bungie api session
     fastify.register(session, sessionOptions); // register session storage for bungie api.
     fastify.decorateRequest("BClient", null); // Add a utility function for making requests to the api

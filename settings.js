@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "fs";
 
 let envs = {
     development: {
@@ -16,7 +16,7 @@ let envs = {
     test: {}
 }
 
-module.exports = (env) => {
+export default function (env) {
     return {
         https: {
             allowHTTP1: true,
