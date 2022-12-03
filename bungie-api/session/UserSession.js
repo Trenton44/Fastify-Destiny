@@ -1,10 +1,10 @@
-const template = require("./template.js");
+import template from "./template.js";
 
-module.exports = class UserSession {
+export default class UserSession {
     constructor(data){ 
         // Base template if this is a new user, user data if it exists.
         this.newUser = !data;
-        this.data = !data ? template() : data; 
+        this.data = !data ? template : data; 
     }
     toJSON(){ return this.data; }
     get language(){ return this.data._user.language; }

@@ -1,5 +1,6 @@
-const { RefreshTokenExpired, UserUnauthorized } = require("../errors");
-const axios = require("axios");
+import { RefreshTokenExpired, UserUnauthorized } from "../errors.js";
+import { default as axios } from "axios";
+
 const axiosToken = axios.create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
     method: "POST",
@@ -63,16 +64,11 @@ const UserExists = async (request) => {
         request.session.data.hasProfile ? setDefaultProfile(request.session.data) : GetUserProfile(request);
 }
 
-module.exports = async (request, reply) => {
+export default async function(request, reply) {
     let userdata = request.session.data;
     await LoginInitiated(userdata);
     await updateTokens(userdata);
     request.BClient.defaults.headers.Authorization = "Bearer "+ request.session.data.accessToken;
     await UserExists(request);
 };
-if(process.env.NODE_ENV == "test"){
-    module.exports.UserExists = UserExists;
-    module.exports.updateTokens = updateTokens;
-    module.exports.LoginInitiated = LoginInitiated;
-    module.exports.setDefaultProfile = setDefaultProfile; 
-}
+export { UserExists, updateTokens, LoginInitiated, setDefaultProfile };
