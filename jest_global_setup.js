@@ -1,9 +1,11 @@
-require("dotenv").config({ path: ".env-test" });
-const { MongoClient } = require("mongodb");
+import dotenv from "dotenv";
+dotenv.config({ path: ".env-test" });
+import { MongoClient } from "mongodb";
+import mongoServer from "./mongodb_memory_server.js";
 
-module.exports = async function(globalConfig, projectConfig){
+export default async function(globalConfig, projectConfig){
     console.log();
-    globalThis.__MONGOSERVER__ = await require("./mongodb_memory_server.js").catch( (error) => Error(error));
+    globalThis.__MONGOSERVER__ = mongoServer;
     console.log("Mongo Server created successfully.");
 
     process.env.MONGO_DB_URL = globalThis.__MONGOSERVER__.getUri();

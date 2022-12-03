@@ -1,4 +1,4 @@
-module.exports = async function(globalConfig, projectConfig){
+export default async function(globalConfig, projectConfig){
     await globalThis.__MONGOCONNECT__.close();
     console.log("Successfully closed connection to test server.");
     await globalThis.__MONGOSERVER__.stop();
