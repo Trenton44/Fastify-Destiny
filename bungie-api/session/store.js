@@ -1,13 +1,19 @@
-const MongoStore = require("connect-mongo");
-const { MongoClient } = require("mongodb");
-const UserSession = require("./UserSession.js");
+import MongoStore from "connect-mongo";
+import { MongoClient } from "mongodb";
+import UserSession from "./UserSession.js";
 
-const mongoConnection = MongoClient.connect(process.env.MONGO_DB_URL, {
+if(!process.env.MONGO_DB_URL && process.env.NODE_ENV == "development"){
+    console.warn("Warning: No MONGO_DB_URL env variable detected. creating a local MongoDB instance and assigning it to MONGO_DB_URL. This should no be used in a production enviornment.");
+    await import("../../mongodb_memory_server.js");
+}
+    
+
+const mongoConnection = await MongoClient.connect(process.env.MONGO_DB_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
 
-module.exports = MongoStore.create({
+const store = MongoStore.create({
     client: mongoConnection,
     dbName: process.env.MONGO_DB_NAME,
     collectionName: process.env.MONGO_DB_COLLECTION,
@@ -35,3 +41,5 @@ module.exports = MongoStore.create({
         at_size: process.env.CRYPTO_AT_SIZE
     }
 });
+
+export default store;
