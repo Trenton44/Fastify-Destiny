@@ -1,4 +1,4 @@
-const Node = require("./node.js");
+import Node from "./node.js";
 
 test("Node instance throws error if it is not given a key upon instantiation.", () =>{
     expect(() => test = new Node()).toThrow();

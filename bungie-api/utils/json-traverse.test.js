@@ -1,4 +1,4 @@
-let guide = require("./json-traverse.js");
+import guide from "./json-traverse.js";
 
 test("tryTraversal() should return false on invalid obj location.", () => {
     let test = {};
