@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+require = createRequire(import.meta.url);
 const api_doc = require("../manifests/openapi.json");
 
 function tryTraversal(keylist, obj){
@@ -36,4 +38,4 @@ function findPath(oalink, reqtype, code=200, repformat="application/json"){
     return schema;
 }
 
-module.exports = { findPath, findSchema, parseRef, tryTraversal };
+export { findPath, findSchema, parseRef, tryTraversal };

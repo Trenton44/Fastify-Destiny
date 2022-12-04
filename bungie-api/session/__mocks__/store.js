@@ -15,5 +15,4 @@ export default new MongoStore({
         session.data = new UserSession(session.data); 
         return session;
     },
-    
 }); 

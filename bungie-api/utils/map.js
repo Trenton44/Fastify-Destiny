@@ -1,10 +1,7 @@
-import guide from "./json-schema-controller.js";
+import { tryTraversal, findSchema } from "./json-traverse.js";
 import NodeController from "./nodecontroller.js";
 import Node from "./node.js";
 import TransformFactory from "./transform-factory.js";
-import SwaggerParser from "@apidevtools/swagger-parser";
-let API = await SwaggerParser.resolve("../manifests/openapi.json");
-
 
 export default class DataMap {
     constructor(language, config={}){
@@ -12,8 +9,8 @@ export default class DataMap {
         this.config = config;
     }
     #buildCustomOptions(ckeys, rkeys){
-        let config = ckeys instanceof Array ? guide.tryTraversal(ckeys, this.config) : [];
-        let ref = rkeys instanceof Array ? guide.tryTraversal([ rkeys[rkeys.length -1] ], this.config) : [];
+        let config = ckeys instanceof Array ? tryTraversal(ckeys, this.config) : [];
+        let ref = rkeys instanceof Array ? tryTraversal([ rkeys[rkeys.length -1] ], this.config) : [];
         let options = {};
         configkeywords.forEach( (key) =>{
             options[key] = ref[key] != undefined ? ref[key] : undefined;
@@ -25,7 +22,7 @@ export default class DataMap {
             let initial = false;
             let ccurrent = this.config;
             for(let key of ckeys){
-                let clevel = guide.tryTraversal(key, ccurrent);
+                let clevel = tryTraversal(key, ccurrent);
                 if(!clevel)
                     break;
                 if(clevel[key] != undefined)
@@ -50,7 +47,7 @@ export default class DataMap {
             case "object": {
                 if(schema.properties){
                     Object.keys(data).forEach( (property) => {
-                        let [ nodeschema, schemaref ] = guide.findSchema(["properties"], schema);
+                        let [ nodeschema, schemaref ] = findSchema(["properties"], schema);
                         if(!schemaref && !nodeschema){
                             let nextnode = new Node(property);
                             node.addChild(nextnode);
@@ -64,7 +61,7 @@ export default class DataMap {
                     });
                 }
                 else if(schema.additionalProperties){
-                    let [ nodeschema, schemaref ] = guide.findSchema(["additionalProperties"], schema);
+                    let [ nodeschema, schemaref ] = findSchema(["additionalProperties"], schema);
                     Object.keys(data).forEach( (property) => {
                         let options = this.#buildCustomOptions([...ckeys, property], schemaref);
                         let funcs = this.transformFactory.buildTransformArray(options, nodeschema);
@@ -74,7 +71,7 @@ export default class DataMap {
                     });
                 }
                 else if(schema.allOf){
-                    let [ nodeschema, schemaref ] = guide.findSchema(["allOf", 0], schema);
+                    let [ nodeschema, schemaref ] = findSchema(["allOf", 0], schema);
                     //  may need to come back and add schemaref/allOf to the config here
                     this.#Process(data, nodeschema, ckeys, node);
                 }
@@ -82,7 +79,7 @@ export default class DataMap {
                 return true;
             }
             case "array": {
-                let [ nodeschema, schemaref ] = guide.findSchema(["items"], schema);
+                let [ nodeschema, schemaref ] = findSchema(["items"], schema);
                 let options = this.#buildCustomOptions(ckeys, schemaref);
                 data.forEach( (current, index) => {
                     let funcs = this.transformFactory.buildTransformArray(options, nodeschema);
