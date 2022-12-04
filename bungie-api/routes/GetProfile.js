@@ -53,5 +53,5 @@ async function GET(request, reply){
         }
     });
     console.log(response);
-    request.JSONMap(response, specuri, defaultConfig, request.session.data.language);
-}
+    return request.BResponse(response, specuri, defaultConfig);
+};
