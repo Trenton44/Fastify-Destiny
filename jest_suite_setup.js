@@ -1,6 +1,10 @@
 import {jest} from "@jest/globals";
 import MongoStore from "connect-mongo";
 import UserSession from "./bungie-api/session/UserSession.js";
+
+import { createRequire } from 'node:module';
+globalThis.__REQUIREMODULE__ = createRequire(import.meta.url);
+
 jest.unstable_mockModule("axios", () => {
     const mockAxios = jest.createMockFromModule("axios");
     mockAxios.create = jest.fn(() => mockAxios);
@@ -28,8 +32,8 @@ jest.unstable_mockModule("./bungie-api/session/store.js", () => {
         })
     };
 });
-import sessionStore from "./bungie-api/session/store.js";
-jest.unstable_mockModule("./bungie-api/session/settings.js", () => {
+jest.unstable_mockModule("./bungie-api/session/settings.js", async () => {
+    const { default: sessionStore } = await import("./bungie-api/session/store.js");
     return {
         default: {
             secret: process.env.SESSION_STORE_SECRET,
@@ -52,4 +56,7 @@ beforeAll(async () => {
     console.log("Creating MongoDB Collection.");
     global.MongoCollection = await globalThis.__MONGODB__.collection(process.env.MONGO_DB_COLLECTION); // Promise to collection, for easy access in test suites
     console.log("Initializing application server.");
+    const { default: app } = await import("./app.js");
+    global.App = app;
 });
+afterAll(async () => await global.App.close());
