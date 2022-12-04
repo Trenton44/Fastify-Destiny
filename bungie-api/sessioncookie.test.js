@@ -1,10 +1,9 @@
 import { jest } from "@jest/globals";
 
-import app from "../app.js";
 let cookies = null;
 beforeAll(async () => {
     // make a request to initialize the session in the DB
-    let result = await app.inject({
+    let result = await global.App.inject({
         method: "GET",
         url: "/"
     });
@@ -31,5 +30,3 @@ test("Corresponding session should exist inside DB", async () => {
         ])
     );
 });
-
-afterAll(async () => await app.close());

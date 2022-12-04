@@ -5,8 +5,6 @@
     if _state parameter is validated, request correctly stores query code into user session
     valid request correctly returns a 303 redirect to page stored in ORIGIN env variable
 */
-jest.mock("../session/store.js");
-jest.mock("../session/settings.js");
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cookie = {};
@@ -49,15 +47,15 @@ test("Recieving an invalid _state parameter should destroy the session and retur
     expect(ses).toEqual(null);
 });
 
-test.only("Receiving a valid state parameter should return 303 redirect", async () => {
+test("Receiving a valid state parameter should return 303 redirect", async () => {
     let currentstate = await global.MongoCollection.findOne({ _id: global.sessionID });
+    console.log(currentstate);
     currentstate = currentstate.session.data._state;
     expect(currentstate).toBeTruthy();
     expect(cookie).toBeTruthy();
     Object.entries(cookie).forEach(([key, value]) => {
         encodeURIComponent(value);
     });
-    console.log(cookie);
     let result = await global.App.inject({
         authority: "http://127.0.0.1",
         method: "GET",
