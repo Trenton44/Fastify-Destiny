@@ -41,7 +41,7 @@ const transformFunctions = {
 export default class TransformFactory {
     constructor(language){
         this.language = language;
-        this.manifest = getManifest(this.language);
+        //this.manifest = getManifest(this.language);
     }
     buildTransformArray(options, schema){
         let functions = [];
