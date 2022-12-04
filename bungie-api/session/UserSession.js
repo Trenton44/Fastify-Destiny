@@ -1,5 +1,3 @@
-import template from "./template.js";
-
 export default class UserSession {
     constructor(data){ 
         // Base template if this is a new user, user data if it exists.
