@@ -1,5 +1,5 @@
-import Node from "./node";
-import getManifest from "../manifests";
+import Node from "./node.js";
+import getManifest from "../manifests/index.js";
 const schemakeywords = [ "x-mapped-definition", "x-enum-reference" ];
 const serverkeywords = [ "filter", "group", "link" ];
 
