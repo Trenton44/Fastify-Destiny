@@ -1,6 +1,6 @@
-const Node = require("./node.js");
+import Node from "./node";
 
-class NodeController {
+export default class NodeController {
     constructor(config){
         this.config = config;
         this.root = null;
@@ -106,6 +106,4 @@ class NodeController {
         this.#connectLinks();
         return this.root.compile();
     }
-}
-
-module.exports = NodeController;
+};

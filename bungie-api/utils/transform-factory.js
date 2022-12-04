@@ -1,5 +1,5 @@
-const Node = require("./node.js");
-const getManifest = require("./manifest/index.js");
+import Node from "./node";
+import getManifest from "../manifests";
 const schemakeywords = [ "x-mapped-definition", "x-enum-reference" ];
 const serverkeywords = [ "filter", "group", "link" ];
 
@@ -38,7 +38,7 @@ const transformFunctions = {
     },
 };
 
-class TransformFactory {
+export default class TransformFactory {
     constructor(language){
         this.language = language;
         this.manifest = getManifest(this.language);
@@ -80,5 +80,3 @@ class BuildTransform {
         this.transform = transformFunctions[key].bind(this);
     }
 }
-
-module.exports = TransformFactory;

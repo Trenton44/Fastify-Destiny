@@ -1,10 +1,7 @@
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 const manifests = require("./languages.json");
-const { accessSync, constants } = require("fs");
-const path = require("path");
-
-module.exports = (language) => {
-    //console.time("manifest retrieval");
+export default function(language) {
     let manifest = manifests[language] ? require(manifests[language]) : require(manifests["en"]);
-    //console.timeEnd("manifest retrieval");
     return manifest;
 };

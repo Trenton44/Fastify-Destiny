@@ -1,4 +1,4 @@
-class Node{
+export default class Node{
     constructor(key, options={}, functions=[]){
         if(!key)
             throw Error("Node instance requires a key parameter.");
@@ -63,6 +63,4 @@ class Node{
         return this.data;
         
     }
-}
-
-module.exports = Node;
+};

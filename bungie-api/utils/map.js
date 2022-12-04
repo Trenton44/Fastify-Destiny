@@ -1,10 +1,12 @@
-const guide = require("./json-schema-controller.js");
-const NodeController = require("./nodecontroller.js");
-const Node = require("./node.js");
-const TransformFactory = require("../transform-factory.js");
+import guide from "./json-schema-controller.js";
+import NodeController from "./nodecontroller.js";
+import Node from "./node.js";
+import TransformFactory from "./transform-factory.js";
+import SwaggerParser from "@apidevtools/swagger-parser";
+let API = await SwaggerParser.resolve("../manifests/openapi.json");
 
 
-class DataMap {
+export default class DataMap {
     constructor(language, config={}){
         this.transformFactory = new TransformFactory(language);
         this.config = config;
@@ -96,6 +98,4 @@ class DataMap {
             }
         }
     }
-}
-
-module.exports = DataMap;
+};
