@@ -1,7 +1,12 @@
-const UserSession = require("./UserSession.js");
-const template = require("./template.js");
+import UserSession from "./UserSession.js";
+import template from "./template.js";
+console.log(template());
 
-test("if no session data is passed, constructor should create data using template.js.", 
+test("UserSession language should default to 'en'", 
+    () => expect(new UserSession.data.language).toEqual("en")
+);
+
+test("if no session data is passed, constructor should create session data template.", 
     () => expect(new UserSession().data).toEqual(template())
 );
 

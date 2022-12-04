@@ -4,7 +4,15 @@ export default class UserSession {
     constructor(data){ 
         // Base template if this is a new user, user data if it exists.
         this.newUser = !data;
-        this.data = !data ? template : data; 
+        this.data = data ? data : {
+            _authdata: {},
+            _user: {
+                language: "en",
+                membershipId: null,
+                active: null,
+                profiles: {}
+            }
+        };
     }
     toJSON(){ return this.data; }
     get language(){ return this.data._user.language; }
