@@ -1,5 +1,4 @@
 import {jest} from "@jest/globals";
-
 import { default as axios } from "axios";
 import apirequest from "../api_request.js";
 import { UserUnauthorized, RefreshTokenExpired } from "../errors";
@@ -36,10 +35,6 @@ describe("These tests verify the functionality of UserExists().", () => {
     test("Returns true if an active user profile exists.", 
         () => expect(UserExists(mockRequest)).resolves.toEqual(true)
     );
-    
-    test("If no active profile exists, but user does have a profile, UserExists() calls setDefaultProfile().", () => {
-        expect(true).toEqual(false);
-    });
     
     test("If user has no profiles, UserExists() makes a request to the Bungie API.", async () => {
         mockRequest.session.data.data._user.active = null;
