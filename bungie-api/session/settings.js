@@ -9,9 +9,7 @@ const settings = {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-    }
+    },
+    store: sessionStore
 };
-
-if(sessionStore)
-    settings.store = sessionStore;
 export default settings;

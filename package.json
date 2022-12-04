@@ -21,7 +21,7 @@
     "predeploy": "node bungie-api/manifests/manifest.js",
     "deploy": "node server.js",
     "generate-docs": "jsdoc -c ./jsdoc.json",
-    "test": "jest"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "devDependencies": {
     "docdash": "^1.2.0",

@@ -1,19 +1,14 @@
-jest.mock("../api_request.js");
+import {jest} from "@jest/globals";
 
-jest.mock("axios", () => {
-    const mockAxios = jest.createMockFromModule("axios");
-    mockAxios.create = jest.fn(() => mockAxios);
-    return mockAxios;
-});
-
-const { UserUnauthorized, RefreshTokenExpired } = require("../errors");
-const UserSession = require("./UserSession.js");
-const apirequest = require("../api_request.js");
+import { default as axios } from "axios";
+import apirequest from "../api_request.js";
+import { UserUnauthorized, RefreshTokenExpired } from "../errors";
+import UserSession from "./UserSession.js";
 // by default, reject any attempts at a request, to prevent unwanted network requests.
-const axios = require("axios");
+
 axios.request = jest.fn(() => Promise.reject("you shouldn't be making any requests here."));
 
-const { UserExists, updateTokens, LoginInitiated, setDefaultProfile } = require("./auth.js");
+import { UserExists, updateTokens, LoginInitiated, setDefaultProfile } from "./auth.js";
 // convert all of these to jest.fn(), with original function as default, so i can change their implementation per test.
 describe("These tests verify the functionality of UserExists().", () => {
     let mockRequest = null;
