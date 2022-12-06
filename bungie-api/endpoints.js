@@ -14,7 +14,8 @@ function GeneralRoutes(fastify, options, next){
 };
 
 function AuthorizedRoutes(fastify, options, next) {
-    fastify.addHook("preHandler", CheckSessionAuthorized);
+    fastify.addHook("preHandler", async(request, reply) => CheckSessionAuthorized(request, reply)
+    .catch(error => reply.code(400).send(error)));
     fastify.route(root);
     fastify.route(UserProfiles.get);
     fastify.route(UserProfiles.post);
