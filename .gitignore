@@ -1,10 +1,10 @@
 /dev_assets
 /deprecated
 /node_modules
-bungie-api/manifests/manifest
-bungie-api/manifests/*.json
-
+bungie-api/data/*.json
+bungie-api/data/manifests/*
 .env
+.env-test
 *.pem
 dockertoAWS.sh
 /old
