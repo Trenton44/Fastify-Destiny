@@ -52,7 +52,7 @@ async function GET(request, reply){
             components: request.query.components
         }
     });
-    let Map = new request.BMap(request.session.language, defaultConfig);
-    let data = Map.mapResponse();
+    let Map = new request.BMap(request.session.language);
+    let data = Map.mapResponse(response, specuri, defaultConfig, { type: "get", code: 200, format: "application/json" });
     return reply.code(200).send(data);
 };
