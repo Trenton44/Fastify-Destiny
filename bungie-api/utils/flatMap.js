@@ -23,7 +23,7 @@ import flattenJSON from "./flatten-json.js";
 import genJSON from "./json-generator.js";
 import genSchema from "./open-api-generator.js";
 
-const flatAPI = flattenJSON(genSchema, API.components.schemas, API);
+const flatAPI = flattenJSON(genSchema, ["#", "#", API.components.schemas["Destiny.Responses.DestinyProfileResponse"], API]);
 
 export default class DataMap {
     constructor(language){
@@ -59,10 +59,21 @@ export default class DataMap {
         //let nodes = new NodeController(this.config);
         this.Process(data, schema);
     }
-    Process(data, config){
-        let dataMap = flattenJSON(genJSON, data);
-        let configMap = flattenJSON(genJSON, config);
-        
+    static stretchJSON(data){
+        let result = {};
+        Object.entries(data).forEach(([key, value]) => {
+            let keys = key.split("/");
+            keys.shift();
+            let temp = result;
+            for(let i in keys){
+                if(!temp[keys[i]])
+                    temp[keys[i]] = {};
+                if(i == keys.length - 1)
+                    temp[keys[i]] = value;
+                else
+                    temp = temp[keys[i]];
+            }
+        });
+        return result;
     }
-    
 }
