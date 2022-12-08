@@ -1,4 +1,13 @@
+/*
+    propertylist: Nothing resets, properties all the way down the json tree.
+    reflist: resets on every ref resolution, include the ref url and properties afterwards
+    yield [reflist, {
+        uri: propertylist,
+        data: { data obj }
+    }]
 
+    TODO: rework this to work like config-generator, where 
+*/
 const keywords = {
     properties: properties,
     allOf: allOf,
@@ -6,45 +15,49 @@ const keywords = {
     items: items
 };
 
-export default function* genFlatSchema(uri, obj, schema) {
+export default function* genFlatSchema(uri, refuri, obj, schema) {
     for(let key in obj){
-        if(keywords[key])
-            yield* keywords[key](uri, obj[key], schema);
-        else if(key == "$ref")
-            yield* genFlatSchema(uri, resolveRef(obj[key], schema), schema);
-        else
-            yield [uri+'/'+key, obj[key]];
+        if(keywords[key]){
+            yield* keywords[key](uri, refuri, obj[key], schema);
+        }
+        else if(key == "$ref"){
+            refuri = obj[key];
+            yield* genFlatSchema(uri, refuri, resolveRef(obj[key], schema), schema);
+        }
+        /*else{
+            yield [refuri+'/'+key, { dataUri: uri+'/'+key, data: obj[key] }];
+        }*/
     }
-    return null;
+    yield [refuri, { dataUri: uri, data: obj }];
 }
-function* properties(uri, data, schema){
+function* properties(uri, refuri, data, schema){
     for(let key in data){
         if(data[key] instanceof Object)
-            yield* genFlatSchema(uri+'/'+key, data[key], schema);
+            yield* genFlatSchema(uri+'/'+key, refuri+'/'+key, data[key], schema);
         else
-            yield [uri+'/'+key, obj[key]];
+            yield [refuri+'/'+key, { dataUri: uri+'/'+key, data: obj[key] }];
     }
     return null;
 }
-function* allOf(uri, data, schema){
+function* allOf(uri, refuri, data, schema){
     if(!allOf)
         return null;
     for(let key in data)
-        yield* genFlatSchema(uri, data[key], schema);
+        yield* genFlatSchema(uri, refuri, data[key], schema);
 }
-function* additionalProperties(uri, data, schema){
+function* additionalProperties(uri, refuri, data, schema){
     if(!data){ return null };
     for(let key in data){
         let temp = {};
         temp[key] = data[key];
-        yield* genFlatSchema(uri, temp, schema);
+        yield* genFlatSchema(uri+'/[^/ ]*', refuri, temp, schema);
     }
 }
-function* items(uri, data, schema){
+function* items(uri, refuri, data, schema){
     for(let key in data){
         let temp = {};
         temp[key] = data[key];
-        yield* genFlatSchema(uri, temp, schema)
+        yield* genFlatSchema(uri, refuri, temp, schema)
     }
         
 }
