@@ -1,6 +1,6 @@
-export default function flattenJSON(generator, data, schema){
+export default function flattenJSON(generator, params){
     let temp = {};
-    let iterator = generator("#", data, schema);
+    let iterator = generator(...params);
     while(true){
         let next = iterator.next();
         if(next.done)
