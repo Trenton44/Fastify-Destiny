@@ -17,16 +17,15 @@ const keywords = {
 };
 const keywordlist = Object.keys(keywords);
 export default function* generatorSchema(refUri, dataRegex, data, schema){
-    yield [dataRegex+"$", { 
-        dataUri: refUri, 
-        data: Object.fromEntries(Object.entries(data).filter(([key, value]) => !keywordlist.find(keyword => keyword == key))) 
-    }];
     for(let key in data){
         if(!keywords[key])
             continue;
         yield* keywords[key](refUri, dataRegex, data[key], schema);
     }
-    
+    yield [dataRegex, { 
+        ref: refUri, 
+        data: Object.fromEntries(Object.entries(data).filter(([key, value]) => !keywordlist.find(keyword => keyword == key))) 
+    }];
 }
 
 function* parseRef(refUri, dataRegex, data, schema){
@@ -54,12 +53,8 @@ function locate(keys, obj){
 
 function* properties(refUri, dataRegex, data, schema){
     for(let key in data){
-        if(data[key] instanceof Object)
-            yield* generatorSchema(refUri+'/'+key, dataRegex+'\/'+key, data[key], schema);
-        else
-            yield [dataRegex+'\/'+key+"$", { dataUri: refUri+'/'+key, data: data[key] }];
+        yield* generatorSchema(refUri+'/'+key, dataRegex+"\\/"+key, data[key], schema);
     }
-    return null;
 }
 function* allOf(refUri, dataRegex, data, schema){
     if(!allOf)
@@ -70,16 +65,8 @@ function* allOf(refUri, dataRegex, data, schema){
 function* additionalProperties(refUri, dataRegex, data, schema){
     if(!data)
         return null
-    for(let key in data){
-        let temp = {};
-        temp[key] = data[key];
-        yield* generatorSchema(refUri, dataRegex+'\/[^/ ]*', temp, schema);
-    }
+    yield* generatorSchema(refUri, dataRegex+"\\/[^\\/]*", data, schema);
 }
 function* items(refUri, dataRegex, data, schema){
-    for(let key in data){
-        let temp = {};
-        temp[key] = data[key];
-        yield* generatorSchema(refUri, dataRegex, data, schema)
-    }
+    yield* generatorSchema(refUri, dataRegex+"\\/[^\\/]*", data, schema);
 }
