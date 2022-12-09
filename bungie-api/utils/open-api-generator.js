@@ -12,65 +12,37 @@ const keywords = {
     properties: properties,
     allOf: allOf,
     additionalProperties: additionalProperties,
-    items: items
+    items: items,
+    "$ref": parseRef
 };
+const keywordlist = Object.keys(keywords);
+export default function* generatorSchema(refUri, dataRegex, data, schema){
+    yield [dataRegex+"$", { 
+        dataUri: refUri, 
+        data: Object.fromEntries(Object.entries(data).filter(([key, value]) => !keywordlist.find(keyword => keyword == key))) 
+    }];
+    for(let key in data){
+        if(!keywords[key])
+            continue;
+        yield* keywords[key](refUri, dataRegex, data[key], schema);
+    }
+    
+}
 
-export default function* genFlatSchema(uri, refuri, obj, schema) {
-    for(let key in obj){
-        if(keywords[key]){
-            yield* keywords[key](uri, refuri, obj[key], schema);
-        }
-        else if(key == "$ref"){
-            refuri = obj[key];
-            yield* genFlatSchema(uri, refuri, resolveRef(obj[key], schema), schema);
-        }
-        /*else{
-            yield [refuri+'/'+key, { dataUri: uri+'/'+key, data: obj[key] }];
-        }*/
-    }
-    yield [refuri, { dataUri: uri, data: obj }];
-}
-function* properties(uri, refuri, data, schema){
-    for(let key in data){
-        if(data[key] instanceof Object)
-            yield* genFlatSchema(uri+'/'+key, refuri+'/'+key, data[key], schema);
-        else
-            yield [refuri+'/'+key, { dataUri: uri+'/'+key, data: obj[key] }];
-    }
-    return null;
-}
-function* allOf(uri, refuri, data, schema){
-    if(!allOf)
-        return null;
-    for(let key in data)
-        yield* genFlatSchema(uri, refuri, data[key], schema);
-}
-function* additionalProperties(uri, refuri, data, schema){
-    if(!data){ return null };
-    for(let key in data){
-        let temp = {};
-        temp[key] = data[key];
-        yield* genFlatSchema(uri+'/[^/ ]*', refuri, temp, schema);
-    }
-}
-function* items(uri, refuri, data, schema){
-    for(let key in data){
-        let temp = {};
-        temp[key] = data[key];
-        yield* genFlatSchema(uri, refuri, temp, schema)
-    }
-        
+function* parseRef(refUri, dataRegex, data, schema){
+    refUri = data;
+    data = resolveRef(data, schema);
+    yield* generatorSchema(refUri, dataRegex, data, schema);
 }
 function resolveRef(ref, schema){
     ref = ref.slice(0);
-    if(ref[0] === "#"){
-        let path = ref.split("/");
-        path.shift();
-        let obj = locate(path, schema);
-        let val = obj["$ref"] ? resolveRef(obj["$ref"]) : obj;
-        return val;
-    }
-    else{ throw Error("Non-local URL "+ref+" currently unsupported."); }
+    if(ref[0] !== "#")
+        throw Error("Non-local URL "+ref+" currently unsupported.");
+    let path = ref.split("/");
+    path.shift();
+    let obj = locate(path, schema);
+    let val = obj["$ref"] ? resolveRef(obj["$ref"]) : obj;
+    return val;
 }
 function locate(keys, obj){
     try{ keys.forEach( (key) => obj = obj[key]); }
@@ -80,3 +52,34 @@ function locate(keys, obj){
     return obj;
 }
 
+function* properties(refUri, dataRegex, data, schema){
+    for(let key in data){
+        if(data[key] instanceof Object)
+            yield* generatorSchema(refUri+'/'+key, dataRegex+'\/'+key, data[key], schema);
+        else
+            yield [dataRegex+'\/'+key+"$", { dataUri: refUri+'/'+key, data: data[key] }];
+    }
+    return null;
+}
+function* allOf(refUri, dataRegex, data, schema){
+    if(!allOf)
+        return null;
+    for(let key in data)
+        yield* generatorSchema(refUri, dataRegex, data[key], schema);
+}
+function* additionalProperties(refUri, dataRegex, data, schema){
+    if(!data)
+        return null
+    for(let key in data){
+        let temp = {};
+        temp[key] = data[key];
+        yield* generatorSchema(refUri, dataRegex+'\/[^/ ]*', temp, schema);
+    }
+}
+function* items(refUri, dataRegex, data, schema){
+    for(let key in data){
+        let temp = {};
+        temp[key] = data[key];
+        yield* generatorSchema(refUri, dataRegex, data, schema)
+    }
+}
