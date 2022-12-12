@@ -14,8 +14,15 @@ function Filter(data, schema, datakey, searchkey, option){
 }
 function Group(data, schema, datakey, searchkey, option){
     for(let group in option){
-        for(let key in option[group]){
-            //let datakey.find(elem => key === elem);
+        for(let location of option[group]){
+            let key = location.replaceAll(".", "/");
+            // added hardcoded "#/" since datakey is represented as uri. Not elegant, but plan to revisit this later.
+            if(datakey.indexOf("#/"+key) !== 0)
+                continue;
+            let newkey = datakey.replace(key, group+'/'+key);
+            let temp = data[datakey];
+            delete data[datakey];
+            data[newkey] = temp;
         }
     }
     return data;
