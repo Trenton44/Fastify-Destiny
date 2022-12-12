@@ -33,7 +33,8 @@ export default class SwaggerMap extends JSONMap {
             let func = this.keywords[key].bind(this); //bind to maintain "this" reference to instance, seems to break when calling generator as this.keywords[key]
             yield* func(refUri, dataRegex, data[key]);
         }
-        yield [dataRegex, { 
+        //$ works because each keys is checked individually. If you swap to one string of all keys, will need to re-evaluate regex.
+        yield [dataRegex+"($|\/)", { 
             ref: refUri, 
             data: Object.fromEntries(Object.entries(data).filter(([key, value]) => !this.keywordlist.find(keyword => keyword == key))) 
         }];
