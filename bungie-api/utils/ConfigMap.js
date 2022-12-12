@@ -40,12 +40,13 @@ export default class ConfigMap extends JSONMap {
         let temp = this.obj;
         let opts = Object.fromEntries(Object.entries(temp).filter(([key, value]) => this.keywords.find(keyword => keyword == key)));
         for(let key of keys){
+            // if no config is specified for entire uri, return inheritable values, that would have been passed down
             if(!temp[key])
-                return opts;
+                return Object.fromEntries(Object.entries(opts).filter(([key, value]) => this.inheritables.find(keyword => keyword == key)));
             opts = this.inheritValues(temp[key], opts);
             temp = temp[key];
         }
-        return opts;
+        return Object.fromEntries(Object.entries(opts).filter(([key, value]) => this.keywords.find(keyword => keyword == key)));
     }
     addTransformation(key, func){
         func.bind(this);
