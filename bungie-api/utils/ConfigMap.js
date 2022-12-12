@@ -3,6 +3,7 @@ import JSONMap from "./JsonMap.js";
 export default class ConfigMap extends JSONMap {
     keywords = ["splice", "group", "filter", "link", "x-enum-reference", "x-mapped-definition"];
     inheritables = ["splice", "x-enum-reference", "x-mapped-definition"];
+    transform = {};
     constructor(obj){
         super(obj);
     }
@@ -33,4 +34,17 @@ export default class ConfigMap extends JSONMap {
         }
         yield [uri, Object.fromEntries(Object.entries(data).filter(([key, value]) => this.keywords.find(keyword => keyword == key)))];
     }
+    buildOptions(schemaUri){
+        let keys = schemaUri.split("/");
+        keys.shift();
+        let temp = this.obj;
+        let opts = Object.fromEntries(Object.entries(temp).filter(([key, value]) => this.keywords.find(keyword => keyword == key)));
+        for(let key of keys){
+            if(!temp[key])
+                return opts;
+            opts = this.inheritValues(temp[key], opts);
+            temp = temp[key];
+        }
+    }
+    addTransformation(key, func){ this.transform[key] = func; }
 }
