@@ -1,15 +1,16 @@
 import JSONMap from "./JsonMap.js";
 
 export default class SwaggerMap extends JSONMap {
-    keywords ={
-        properties: this.properties,
-        allOf: this.allOf,
-        additionalProperties: this.additionalProperties,
-        items: this.items,
-        "$ref": this.parseRef
-    };
+    
     constructor(obj){
         super(obj);
+        this.keywords = {
+            properties: this.#properties,
+            allOf: this.#allOf,
+            additionalProperties: this.#additionalProperties,
+            items: this.#items,
+            "$ref": this.#parseRef
+        };
         this.keywordlist = Object.keys(this.keywords);
     }
     flatten(){
@@ -29,7 +30,8 @@ export default class SwaggerMap extends JSONMap {
         for(let key in data){
             if(!this.keywords[key])
                 continue;
-            yield* this.keywords[key](refUri, dataRegex, data[key]);
+            let func = this.keywords[key].bind(this); //bind to maintain "this" reference to instance, seems to break when calling generator as this.keywords[key]
+            yield* func(refUri, dataRegex, data[key]);
         }
         yield [dataRegex, { 
             ref: refUri, 
@@ -59,9 +61,15 @@ export default class SwaggerMap extends JSONMap {
         let val = obj["$ref"] ? this.resolveRef(obj["$ref"]) : obj;
         return val;
     }
+    *#allOf(refUri, dataRegex, data){
+        if(!data)
+            return null;
+        for(let key in data)
+            yield* this.generate(refUri, dataRegex, data[key]);
+    }
     *#parseRef(refUri, dataRegex, data){
         refUri = data;
-        data = this.resolveRef(data);
-        yield* generatorSchema(refUri, dataRegex, data);
+        data = this.#resolveRef(data);
+        yield* this.generate(refUri, dataRegex, data);
     }
 }
