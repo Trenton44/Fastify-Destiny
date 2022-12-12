@@ -20,8 +20,22 @@ export default class JSONMap {
         }
         return temp;
     }
-    inflate(){
-
+    inflate(flatData){
+        let result = {};
+        Object.entries(flatData).forEach(([key, value]) => {
+            let keys = key.split("/");
+            keys.shift();
+            let temp = result;
+            for(let i in keys){
+                if(!temp[keys[i]])
+                    temp[keys[i]] = {};
+                if(i == keys.length - 1)
+                    temp[keys[i]] = value;
+                else
+                    temp = temp[keys[i]];
+            }
+        });
+        return result;
     }
     *generate(uri, data){
         for(let key in data){
