@@ -45,6 +45,10 @@ export default class ConfigMap extends JSONMap {
             opts = this.inheritValues(temp[key], opts);
             temp = temp[key];
         }
+        return opts;
     }
-    addTransformation(key, func){ this.transform[key] = func; }
+    addTransformation(key, func){
+        func.bind(this);
+        this.transform[key] = func; 
+    }
 }
