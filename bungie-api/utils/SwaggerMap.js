@@ -15,7 +15,7 @@ export default class SwaggerMap extends JSONMap {
     }
     flatten(){
         let temp = {};
-        let initialRef = "#/components/schemas/Destiny.Responses.DestinyProfileResponse";
+        let initialRef = ["Destiny.Responses.DestinyProfileResponse"];
         let initialDataRegex = "#";
         let schema = this.obj.components.schemas["Destiny.Responses.DestinyProfileResponse"];
         let gen = this.generate(initialRef, initialDataRegex, schema);
@@ -27,21 +27,23 @@ export default class SwaggerMap extends JSONMap {
         return temp;
     }
     *generate(refUri, dataRegex, data){
+        refUri = refUri.slice(0);
         for(let key in data){
             if(!this.keywords[key])
                 continue;
             let func = this.keywords[key].bind(this); //bind to maintain "this" reference to instance, seems to break when calling generator as this.keywords[key]
             yield* func(refUri, dataRegex, data[key]);
         }
-        //$ works because each keys is checked individually. If you swap to one string of all keys, will need to re-evaluate regex.
-        yield [dataRegex+"($|\/)", { 
+        yield [dataRegex, {
             ref: refUri, 
             data: Object.fromEntries(Object.entries(data).filter(([key, value]) => !this.keywordlist.find(keyword => keyword == key))) 
         }];
     }
     *#properties(refUri, dataRegex, data){
         for(let key in data){
-            yield* this.generate(refUri+'/'+key, dataRegex+"\\/"+key, data[key]);
+            let temp = refUri.slice(0);
+            temp[0] = temp[0]+"/"+key;
+            yield* this.generate(temp, dataRegex+"\\/"+key, data[key]);
         }
     }
     *#additionalProperties(refUri, dataRegex, data){
@@ -69,7 +71,10 @@ export default class SwaggerMap extends JSONMap {
             yield* this.generate(refUri, dataRegex, data[key]);
     }
     *#parseRef(refUri, dataRegex, data){
-        refUri = data;
+        let temp = data.split("/");
+        temp = temp.slice(3, temp.length);
+        temp = temp.join("/");
+        refUri.push(temp);
         data = this.#resolveRef(data);
         yield* this.generate(refUri, dataRegex, data);
     }

@@ -17,6 +17,15 @@ export default class ConfigMap extends JSONMap {
         }
         return temp;
     }
+    findInhertiables(data){
+        return Object.fromEntries(Object.entries(data).filter(([key, value]) => this.inheritables.find(keyword => keyword == key)));
+    }
+    findUninheritables(data){
+        return Object.fromEntries(Object.entries(data).filter(([key, value]) => this.inheritables.find(keyword => keyword != key) && this.keywords.find(keyword => keyword == key)));
+    }
+    findKeywords(data){
+        return Object.fromEntries(Object.entries(data).filter(([key, value]) => this.keywords.find(keyword => keyword == key)));
+    }
     inheritValues(data, inherited) {
         Object.entries(inherited).forEach(([key, value]) => {
             if(!data[key] && this.inheritables.find( element => element == key))
@@ -34,20 +43,7 @@ export default class ConfigMap extends JSONMap {
         }
         yield [uri, Object.fromEntries(Object.entries(data).filter(([key, value]) => this.keywords.find(keyword => keyword == key)))];
     }
-    buildOptions(schemaUri){
-        let keys = schemaUri.split("/");
-        keys.shift();
-        let temp = this.obj;
-        let opts = Object.fromEntries(Object.entries(temp).filter(([key, value]) => this.keywords.find(keyword => keyword == key)));
-        for(let key of keys){
-            // if no config is specified for entire uri, return inheritable values, that would have been passed down
-            if(!temp[key])
-                return Object.fromEntries(Object.entries(opts).filter(([key, value]) => this.inheritables.find(keyword => keyword == key)));
-            opts = this.inheritValues(temp[key], opts);
-            temp = temp[key];
-        }
-        return Object.fromEntries(Object.entries(opts).filter(([key, value]) => this.keywords.find(keyword => keyword == key)));
-    }
+    buildOptions(schemaUri){}
     addTransformation(key, func){
         func.bind(this);
         this.transform[key] = func; 
