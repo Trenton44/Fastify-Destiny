@@ -38,7 +38,7 @@ export default class ConfigMap extends JSONMap {
             // if it's a custom keyword, skip it, no need to do processing.
             if(this.keywords.find(keyword => keyword == key))
                 continue;
-            data[key] = this.inheritValues(data[key], data);
+            //data[key] = this.inheritValues(data[key], data);
             yield* this.generate(uri+'/'+key, data[key]);
         }
         yield [uri, Object.fromEntries(Object.entries(data).filter(([key, value]) => this.keywords.find(keyword => keyword == key)))];
