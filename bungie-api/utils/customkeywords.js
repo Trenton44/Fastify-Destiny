@@ -6,7 +6,7 @@ const keywords = {
     //"link": Link
 };
 
-function Filter(data, schema, datakey, searchkey, option, level){
+function Filter(data, flatschema, schema, datakey, searchkey, option, level){
     let datakeylist = datakey.split("/");
     datakeylist.shift(); //remove #
     if(!option.find(filterkey => filterkey === datakeylist[level])){
@@ -15,7 +15,7 @@ function Filter(data, schema, datakey, searchkey, option, level){
     }
     return false;
 }
-function Group(data, schema, datakey, searchkey, option, level){
+function Group(data, flatschema, schema, datakey, searchkey, option, level){
     let datakeylist = datakey.split("/");
     datakeylist.shift();
     for(let group in option){
@@ -29,16 +29,23 @@ function Group(data, schema, datakey, searchkey, option, level){
     }
     return false;
 }
-function XEnumReference(data, schema, datakey, searchkey, option){
-    console.log(option);
-    let enumSchema = schema[searchkey].data["x-enum-reference"];
+function XEnumReference(data, flatschema, schema, datakey, searchkey, option){
+    let enumSchema = flatschema[searchkey].data["x-enum-reference"];
     if(!enumSchema)
+        return false;
+    if(!option)
+        return false;
+    enumSchema = enumSchema["$ref"].split("/");
+    enumSchema.shift();
+    try{ enumSchema = schema.locate(enumSchema); }
+    catch{ return false; }
+    enumSchema = enumSchema["x-enum-values"];
+    let value = enumSchema.find(element => element.numericValue == data[datakey]);
+    //Sometimes the D2 api is missing data, like the numericValue and it's corresponding identifier. 
+    // in these scenarios, all i can do is return the original value.
+    if(!value)
         return true;
-    enumSchema = schema[enumSchema["$ref"]];
-    console.log("");
-    console.log(enumSchema);
-    //let temp = data[datakey];
-    
+    data[datakey] = value.identifier;
     return true;
 }
 /*
