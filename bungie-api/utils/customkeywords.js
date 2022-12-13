@@ -1,31 +1,45 @@
 const keywords = {
     //"x-mapped-definition": XMappedDefintition,
-    //"x-enum-reference": XEnumReference,
+    "x-enum-reference": XEnumReference,
     "filter": Filter,
     "group": Group,
     //"link": Link
 };
 
-function Filter(data, schema, datakey, searchkey, option){
-    let dkey = datakey.split("/").pop();
-    if(!option.find(filterkey => filterkey === dkey))
+function Filter(data, schema, datakey, searchkey, option, level){
+    let datakeylist = datakey.split("/");
+    datakeylist.shift(); //remove #
+    if(!option.find(filterkey => filterkey === datakeylist[level])){
         delete data[datakey];
-    return data;
-}
-function Group(data, schema, datakey, searchkey, option){
-    for(let group in option){
-        for(let location of option[group]){
-            let key = location.replaceAll(".", "/");
-            // added hardcoded "#/" since datakey is represented as uri. Not elegant, but plan to revisit this later.
-            if(datakey.indexOf("#/"+key) !== 0)
-                continue;
-            let newkey = datakey.replace(key, group+'/'+key);
-            let temp = data[datakey];
-            delete data[datakey];
-            data[newkey] = temp;
-        }
+        return true;
     }
-    return data;
+    return false;
+}
+function Group(data, schema, datakey, searchkey, option, level){
+    let datakeylist = datakey.split("/");
+    datakeylist.shift();
+    for(let group in option){
+        if(!option[group].find(gkey => gkey === datakeylist[level]))
+            return false;
+        datakeylist[level] = group+"/"+datakeylist[level];
+        datakeylist = "#/"+datakeylist.join("/");
+        data[datakeylist] = data[datakey];
+        delete data[datakey];
+        return true;
+    }
+    return false;
+}
+function XEnumReference(data, schema, datakey, searchkey, option){
+    console.log(option);
+    let enumSchema = schema[searchkey].data["x-enum-reference"];
+    if(!enumSchema)
+        return true;
+    enumSchema = schema[enumSchema["$ref"]];
+    console.log("");
+    console.log(enumSchema);
+    //let temp = data[datakey];
+    
+    return true;
 }
 /*
 function test(data, schema, datakey, dataregex, option, additionalProperties){
