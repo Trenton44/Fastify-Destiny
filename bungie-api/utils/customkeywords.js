@@ -5,65 +5,46 @@ const keywords = {
     "group": Group,
     //"link": Link
 };
+//NOTE: to access a leaf node property, you will need to add +1 to the level, to avoid accessing the object storing the property.
 
 function Filter(data, flatschema, schema, datakey, searchkey, option, level){
     let datakeylist = datakey.split("/");
     datakeylist.shift(); //remove #
+    //the key in the datakey uri that will be compared against filter args.
     if(!option.find(filterkey => filterkey === datakeylist[level])){
         delete data[datakey];
-        return true;
+        return null;
     }
-    return false;
+    return datakey;
 }
 function Group(data, flatschema, schema, datakey, searchkey, option, level){
     let datakeylist = datakey.split("/");
     datakeylist.shift();
     for(let group in option){
         if(!option[group].find(gkey => gkey === datakeylist[level]))
-            return false;
+            continue;
         datakeylist[level] = group+"/"+datakeylist[level];
         datakeylist = "#/"+datakeylist.join("/");
         data[datakeylist] = data[datakey];
         delete data[datakey];
-        return true;
+        return datakeylist;
     }
-    return false;
+    return datakey;
 }
 function XEnumReference(data, flatschema, schema, datakey, searchkey, option){
     let enumSchema = flatschema[searchkey].data["x-enum-reference"];
-    if(!enumSchema)
-        return false;
-    if(!option)
-        return false;
+    if(!enumSchema || !option)
+        return datakey;
     enumSchema = enumSchema["$ref"].split("/");
     enumSchema.shift();
     try{ enumSchema = schema.locate(enumSchema); }
-    catch{ return false; }
-    enumSchema = enumSchema["x-enum-values"];
-    let value = enumSchema.find(element => element.numericValue == data[datakey]);
+    catch{ return datakey; }
+    let enumvalue = enumSchema["x-enum-values"].find(val => val.numericValue == data[datakey]);
     //Sometimes the D2 api is missing data, like the numericValue and it's corresponding identifier. 
     // in these scenarios, all i can do is return the original value.
-    if(!value)
-        return true;
-    data[datakey] = value.identifier;
-    return true;
+    if(!enumvalue)
+        return datakey;
+    data[datakey] = enumvalue.identifier;
+    return datakey;
 }
-/*
-function test(data, schema, datakey, dataregex, option, additionalProperties){
-    //x-mapped:
-    if(!schema["x-mapped-definition"] && !option)
-        return data;
-    let newkey = datakey+"Mapped";
-    let manifest = getManifest(language);
-    let datalocation = this.locate(schema["x-mapped-defintion"]["$ref"], manifest);
-    data[newkey] = datalocation;
-    //return data;
-
-
-    //filter
-    let dkey = datakey.slice(datakey.findLastIndex("/"), datakey.length - 1);
-    if(!option.find(filkey => filkey === dkey))
-        delete data[datakey];
-    return data;
-}*/
 export default keywords;
