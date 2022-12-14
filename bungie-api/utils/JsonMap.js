@@ -28,11 +28,11 @@ export default class JSONMap {
             let temp = result;
             for(let i in keys){
                 if(!temp[keys[i]])
-                    temp[keys[i]] = {};
+                    { temp[keys[i]] = {}; }
                 if(i == keys.length - 1)
-                    temp[keys[i]] = value;
+                    { temp[keys[i]] = value; }
                 else
-                    temp = temp[keys[i]];
+                    { temp = temp[keys[i]]; }
             }
         });
         return result;
