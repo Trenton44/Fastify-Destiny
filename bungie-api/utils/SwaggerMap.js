@@ -13,12 +13,13 @@ export default class SwaggerMap extends JSONMap {
         };
         this.keywordlist = Object.keys(this.keywords);
     }
-    flatten(){
+    flatten(initialRef){
         let temp = {};
-        let initialRef = ["Destiny.Responses.DestinyProfileResponse"];
         let initialDataRegex = "#";
-        let schema = this.obj.components.schemas["Destiny.Responses.DestinyProfileResponse"];
-        let gen = this.generate(initialRef, initialDataRegex, schema);
+        let schema = this.obj.components.schemas[initialRef];
+        if(!schema)
+            throw Error("Could not find schema for given initialRef "+initialRef);
+        let gen = this.generate([initialRef], initialDataRegex, schema);
         let next = gen.next();
         while(!next.done){
             temp[next.value[0]] = next.value[1];
@@ -52,6 +53,7 @@ export default class SwaggerMap extends JSONMap {
         yield* this.generate(refUri, dataRegex+"\\/[^\\/]*", data);
     }
     *#items(refUri, dataRegex, data){
+        refUri.push(null);
         yield* this.generate(refUri, dataRegex+"\\/[^\\/]*", data);
     }
     #resolveRef(ref){
