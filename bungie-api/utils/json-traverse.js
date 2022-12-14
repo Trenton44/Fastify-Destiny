@@ -1,6 +1,4 @@
-import { createRequire } from 'node:module';
-require = createRequire(import.meta.url);
-const api_doc = require("../manifests/openapi.json");
+import api_doc from "../data/openapi.json" assert { type: "json" };
 
 function tryTraversal(keylist, obj){
     if(!(obj instanceof Object))

@@ -1,5 +1,5 @@
 import Node from "./node.js";
-import getManifest from "../manifests/index.js";
+import Manifest from "../data/manifest.js";
 const schemakeywords = [ "x-mapped-definition", "x-enum-reference" ];
 const serverkeywords = [ "filter", "group", "link" ];
 
@@ -41,7 +41,7 @@ const transformFunctions = {
 export default class TransformFactory {
     constructor(language){
         this.language = language;
-        //this.manifest = getManifest(this.language);
+        this.manifest = Manifest;
     }
     buildTransformArray(options, schema){
         let functions = [];

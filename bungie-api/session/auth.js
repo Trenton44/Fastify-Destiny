@@ -1,6 +1,5 @@
 import { RefreshTokenExpired, UserUnauthorized } from "../errors.js";
 import { default as axios } from "axios";
-
 const axiosToken = axios.create({
     baseURL: "https://www.bungie.net/Platform/App/OAuth/token/",
     method: "POST",
@@ -12,6 +11,8 @@ const axiosToken = axios.create({
         }
     ]
 });
+
+const UserProfileConfig = {};
 
 const setDefaultProfile = (user) => {
     user.activeProfile = user.userProfiles[Object.keys(user.userProfiles)[0]].destinyMembershipId;
@@ -49,12 +50,16 @@ const updateTokens = async (user) => {
 };
 
 const GetUserProfile = async (request) => {
-    let data = await request.BClient("/User/GetMembershipsById/{membershipId}/{membershipType}/", {
+    const uri = "/User/GetMembershipsById/{membershipId}/{membershipType}/";
+    let data = await request.BClient(uri, {
         params: {
             membershipId: request.session.data.userID,
             membershipType: -1
         }
     }).catch((error) => Promise.reject(error));
+    request.BResponse.config = UserProfileConfig;
+    let schema = await request.BResponse.getPath(uri);
+    data = request.BResponse.mapResponse(data, uri, 200, ); // pull from api_request how to parse this, then do it
     request.session.data.userProfiles = data.destinyMemberships;
     request.session.data.activeProfile = data.primaryMembershipId ? data.primaryMembershipId : setDefaultProfile(request.session.data);
     return true;
@@ -70,5 +75,6 @@ export default async function(request, reply) {
     await updateTokens(userdata);
     request.BClient.defaults.headers.Authorization = "Bearer "+ request.session.data.accessToken;
     await UserExists(request);
+    return true;
 };
 export { UserExists, updateTokens, LoginInitiated, setDefaultProfile };

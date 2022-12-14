@@ -9,5 +9,5 @@ function GET(request, reply){
     // if user receives a BungieUnavailable error, request failed at preHandler, because bungie is down
     // if user recieves a UserUnauthorized error, request failed at preHandler because user has not logged in
     // if user gets here, both api's are functional, return the active Profile.
-    return request.session.data.activeProfile;
+    return reply.code(200).send(request.session.data.activeProfile);
 }
