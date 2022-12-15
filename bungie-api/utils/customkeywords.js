@@ -1,8 +1,12 @@
+import manifest from "../data/manifest.js";
+import geManifest from "../data/manifest.js";
+
 const keywords = {
-    //"x-mapped-definition": XMappedDefintition,
+    "x-mapped-definition": XMappedDefintition,
     "x-enum-reference": XEnumReference,
     "filter": Filter,
     "group": Group,
+    "splice": Splice
     //"link": Link
 };
 //NOTE: to access a leaf node property, you will need to add +1 to the level, to avoid accessing the object storing the property.
@@ -45,6 +49,34 @@ function XEnumReference(data, flatschema, schema, datakey, searchkey, option){
     if(!enumvalue)
         return datakey;
     data[datakey] = enumvalue.identifier;
+    return datakey;
+}
+function Link(data, flatschema, schema, datakey, searchkey, option){
+    /*
+        Link Rules:
+        -Must a parent of ALL nodes that are being linked
+        
+    */
+}
+function Splice(data, flatschema, schema, datakey, searchkey, option){
+    let datakeylist = datakey.split("/");
+    option.forEach(okey =>{
+        let offendex = datakeylist.findIndex(dkindex => dkindex === okey);
+        if(offendex !== -1)
+            datakeylist.splice(offendex, 1); 
+    });
+    return datakeylist.join("/");
+}
+function XMappedDefintition(data, flatschema, schema, datakey, searchkey, option){
+    //get uri $ref from schema value.
+    // manifest data should be flatmapped eventually, so uri will correspond to file name containing data
+    let manifestUri = flatschema[searchkey].data["x-mapped-definition"];
+    if(!manifestkeylist || !option)
+        return datakey;
+    let manifestData = getManifest(manifestUri);
+    if(!manifestData)
+        return datakey;
+    data[datakey+"Mapped"] = manifestData;
     return datakey;
 }
 export default keywords;
