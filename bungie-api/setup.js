@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { createWriteStream } from "fs";
+import JSONMap from "./utils/JsonMap.js";
 import https from "https";
 const bungiepath = "https://www.bungie.net";
 
@@ -49,6 +50,21 @@ Promise.all(manifestDownloads).then( async (result) => {
     console.log("Successfully downloaded all files.");
     console.log("Updating supported languages.");
     await fs.writeFile(dirname.pathname+"languages.json", JSON.stringify(supportedlanguages)).catch( error => Promise.reject(error));
+    console.log("unpacking manifest files.");
+    console.log("flat-mapping manifest data to files. This will take awhile.");
+    for(let lang in supportedlanguages){
+        console.log("mapping "+lang+" dataset.");
+        let data = await import(supportedlanguages[lang], { assert: { type: "json" }});
+        let flat = new JSONMap(data).flatten();
+        
+        for(let key in flat){
+            let temp = key.split("/");
+            temp.shift();
+            temp = temp.join(".");
+            await fs.mkdir(dirname.pathname+"manifests"+"/"+lang, { recursive: true });
+            await fs.writeFile(dirname.pathname+"manifests"+"/"+lang+"/"+temp+".json", JSON.stringify(flat[key])).catch( error => Promise.reject(error));
+        }
+    }
     console.log("Supported languages list successfully updated.");
     console.log("Completed Environment Setup!");
 });
