@@ -4,6 +4,13 @@ export default {
     handler: GET
 };
 
+/**
+ * GET request handler for /bnetResponse endpoint.
+ * Handles incoming reply from bungie.net for authorization flow
+ * @param {Fastify.FastifyRequest} request 
+ * @param {Fastify.FastifyReply} reply 
+ * @returns {}
+ */
 async function GET(request, reply){
     let valid = request.session.data.data._state === decodeURIComponent(request.query.state);
     if(!valid){
