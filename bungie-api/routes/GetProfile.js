@@ -22,8 +22,10 @@ export default {
     },
     handler: GET
 }
-
+/** The OpenAPI 3.0 location of this request */
 const specuri = "/Destiny2/{membershipType}/Profile/{destinyMembershipId}/";
+
+
 const defaultConfig = {
     "splice": true,
     "x-enum-reference": false,
@@ -43,6 +45,13 @@ const defaultConfig = {
         { "x-mapped-definition": false },
 };
 
+/**
+ * Handler for GET requests to the /GetProfile backend endpoint.
+ * Requests data from bungie.net/GetProfile on behalf of authenticated user, and returns data
+ * @param {FastifyRequest} request 
+ * @param {FastifyReply} reply 
+ * @returns {Object}
+ */
 async function GET(request, reply){
     let profile = request.session.user.activeProfile;
     let response = await request.BClient(specuri, {

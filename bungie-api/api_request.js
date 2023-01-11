@@ -11,16 +11,28 @@ function InjectURIParameters(uri, parameters){
     return uri;
 }
 
+/**
+ * Interceptor for axios responses from bungie.net
+ * Validates that incoming response is not HTML, which indicates that the API may be offline
+ * @param {FastifyResponse} response 
+ * @returns 
+ */
 const HTMLInterceptor = (response) => {
     return response.headers["content-type"] !== "application/json; charset=utf-8" ? Promise.reject("Bungie Service is currently unavailable") 
     : response.data.ErrorCode != 1 ? Promise.reject(response.data.ErrorStatus)
     : response;
 };
 
+/**
+ * Transforms an OpenAPI url to a proper bungie.net endpoint url, given the correct parameters
+ * @param {AxiosInstance} request 
+ * @returns {AxiosInstance}
+ */
 const SetupRequest = (request) => {
     request.url = InjectURIParameters(request.url, request.params);
     return request;
 }
+
 
 const axiosBase = {
     baseURL: "https://www.bungie.net/Platform",
@@ -30,6 +42,10 @@ const axiosBase = {
     }
 };
 
+/**
+ * Creates a base axios instance for request, to make requests to bungie.net API
+ * @returns {AxiosInstance}
+ */
 export default function() {
     let axiosBungie = axios.create(axiosBase);
     axiosBungie.interceptors.request.use(SetupRequest);

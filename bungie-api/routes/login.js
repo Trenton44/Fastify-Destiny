@@ -5,6 +5,13 @@ export default {
     handler: GET,
 };
 
+/**
+ * Handler for GET requests to /login endpoint of backend.
+ * Initiates authentication flow with bungie.net and redirects user to OAuth 2.0 login flow
+ * @param {FastifyRequest} request 
+ * @param {FastifyReply} reply 
+ * @returns 
+ */
 async function GET(request, reply){
     let redirect = new URL("https://www.bungie.net/en/OAuth/Authorize");
     request.session.data.data._state = crypto.randomBytes(16).toString("base64");
