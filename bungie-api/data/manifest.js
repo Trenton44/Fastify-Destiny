@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import languages from "./languages.json" assert { type: "json" };
 
 function loadData(keys, language="en"){
