@@ -67,11 +67,19 @@ const manifest = await readJSONFile("./manifest.json");
     One collection per language, so the "en" manifest data will be in the "en" collection.
 */
 let downloads = [];
+let supportedlanguages = {};
 Object.entries(manifest.Response.jsonWorldContentPaths).forEach(([key, value]) => {
-    downloads.push(uploadManifestToDB(bungiepath+value, key, mongoURI, DB_NAME).catch(child => child.kill(1)));
+    supportedlanguages[key] = false;
+    downloads.push(uploadManifestToDB(bungiepath+value, key, mongoURI, DB_NAME)
+    .then(res => {
+        console.log("Adding "+key+" to list of supported languages.");
+        supportedlanguages[key] = true;
+        return true;
+    }).catch(child => child.kill(1)));
 });
 // wait for all child processes to finish uploading data to local mongodb 
 await Promise.all(downloads);
 await mongoClose();
+await writeFile(__dirname+"languages.json", JSON.stringify(supportedlanguages));
 console.log("Manifest data successfully loaded!");
 process.exit(0);
