@@ -1,11 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env-test" });
 import { MongoClient } from "mongodb";
-import mongoServer from "./mongodb_memory_server.js";
+import { MongoMemoryServer } from "mongodb-memory-server";
+import DB_INSTANCE_OPTIONS from "./mongodb_sessionstore_ephemeral";
 
 export default async function(globalConfig, projectConfig){
     console.log();
-    globalThis.__MONGOSERVER__ = mongoServer;
+    globalThis.__MONGOSERVER__ = MongoMemoryServer.create(DB_INSTANCE_OPTIONS);
     console.log("Mongo Server created successfully.");
 
     process.env.MONGO_DB_URL = globalThis.__MONGOSERVER__.getUri();
