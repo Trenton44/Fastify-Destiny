@@ -9,7 +9,7 @@ console.log("Connecting to DB "+process.argv[4]);
 const db = await MongoClient.connect(process.argv[4], {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-}).then( conn => conn.db("ManifestDB"));
+}).then( conn => conn.db(process.argv[5]));
 await db.command({ ping: 1 });
 
 //Create collection using manifest lanugage name.

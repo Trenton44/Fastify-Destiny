@@ -10,5 +10,4 @@ dockertoAWS.sh
 /old
 /env-files
 /docs
-bungie-api/data/manifestDb/*
-bungie-api/data/manifestDb2/*
+bungie-api/data/ManifestDB/*

@@ -1,10 +1,12 @@
 import MongoStore from "connect-mongo";
 import { MongoClient } from "mongodb";
 import UserSession from "./UserSession.js";
+import { MongoMemoryServer } from "mongodb-memory-server";
 
 if(!process.env.MONGO_DB_URL && process.env.NODE_ENV == "development"){
     console.warn("Warning: No MONGO_DB_URL env variable detected. creating a local MongoDB instance and assigning it to MONGO_DB_URL. This should no be used in a production enviornment.");
-    await import("../../mongodb_memory_server.js");
+    const mongoServer = MongoMemoryServer.create(await import("../../mongodb_sessionstore_ephemeral.js"));
+    process.env.MONGO_DB_URL = mongoServer.getUri();
 }
     
 

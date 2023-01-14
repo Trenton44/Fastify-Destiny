@@ -1,16 +1,19 @@
 
 import https from "https";
-import { mkdir, readFile, writeFile, access, constants } from "node:fs/promises";
+import { readFile, writeFile, access, constants } from "node:fs/promises";
 import { fork } from "child_process";
-import { URI } from "./mongodb_manifest.js";
+import { MongoMemoryServer } from "mongodb-memory-server";
+import { DB_INSTANCE_OPTIONS, DB_NAME } from "./mongodb_manifest.js";
 
 const bungiepath = "https://www.bungie.net";
 const openapiurl = "https://raw.githubusercontent.com/Bungie-net/api/master/openapi.json";
 const bungiemanifesturl = "https://www.bungie.net/Platform/Destiny2/Manifest/";
 
 
-const dirname = new URL("./", import.meta.url);
-
+const __dirname = new URL("./", import.meta.url).pathname;
+const mongoServer = await MongoMemoryServer.create(DB_INSTANCE_OPTIONS);
+const mongoURI = mongoServer.getUri();
+const mongoClose = () => mongoServer.stop();
 
 const readJSONFile = async (path) => JSON.parse(await readFile(path, { encoding: "utf8" }));
 const fileExists = (path) => access(path, constants.R_OK | constants.W_OK)
@@ -29,9 +32,9 @@ const DownloadFile = (url, location) => new Promise((resolve, reject) => {
     })
     .on("error", (err) => reject(err));
 });
-const uploadManifestToDB = (url, collection, mongoURI) => new Promise((resolve, reject) => {
+const uploadManifestToDB = (url, collection, mongoURI, dbname) => new Promise((resolve, reject) => {
     console.log("Creating child process...");
-    let childprocess = fork("./child.js", [ url, collection, mongoURI ], {}, error => {
+    let childprocess = fork("./child.js", [ url, collection, mongoURI, dbname ], {}, error => {
         console.error(error);
         reject(childprocess);
     });
@@ -46,14 +49,14 @@ const uploadManifestToDB = (url, collection, mongoURI) => new Promise((resolve, 
 //Check for openapi.json file in current directory. If it doesn't exist, fetch it from Bungie.
 console.log("Checking Bungie OpenAPI 3.0 Spec.");
 await fileExists("openapi.json")
-.catch(err => DownloadFile(openapiurl, dirname.pathname+"openapi.json"));
+.catch(err => DownloadFile(openapiurl, __dirname+"openapi.json"));
 
 console.log("");
 
 //Check for manifest file. If it doesn't exist, fetch it from Bungie.
 console.log("Checking Bungie Manifest.");
 await fileExists("manifest.json")
-.catch(err => DownloadFile(bungiemanifesturl, dirname.pathname+"manifest.json"));
+.catch(err => DownloadFile(bungiemanifesturl, __dirname+"manifest.json"));
 
 //load manifest file.
 const manifest = await readJSONFile("./manifest.json");
@@ -65,9 +68,10 @@ const manifest = await readJSONFile("./manifest.json");
 */
 let downloads = [];
 Object.entries(manifest.Response.jsonWorldContentPaths).forEach(([key, value]) => {
-    downloads.push(uploadManifestToDB(bungiepath+value, key, URI).catch(child => child.kill(1)));
+    downloads.push(uploadManifestToDB(bungiepath+value, key, mongoURI, DB_NAME).catch(child => child.kill(1)));
 });
 // wait for all child processes to finish uploading data to local mongodb 
 await Promise.all(downloads);
+await mongoClose();
 console.log("Manifest data successfully loaded!");
 process.exit(0);
