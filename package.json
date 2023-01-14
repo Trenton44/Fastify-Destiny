@@ -1,4 +1,6 @@
 {
+  "name": "VexGate-API",
+  "version": "1.0.0",
   "type": "module",
   "dependencies": {
     "@apidevtools/swagger-parser": "^10.1.0",
