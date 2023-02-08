@@ -61,7 +61,7 @@ async function GET(request, reply){
             components: request.query.components
         }
     });
-    let Map = new request.BMap(request.session.language);
+    let Map = new request.BMap(response.data, "Destiny.Responses.DestinyProfileResponse");
     let data = Map.mapResponse(response, specuri, defaultConfig, { type: "get", code: 200, format: "application/json" });
     return reply.code(200).send(data);
 };
