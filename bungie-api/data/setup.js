@@ -34,7 +34,7 @@ const DownloadFile = (url, location) => new Promise((resolve, reject) => {
 });
 const uploadManifestToDB = (url, collection, mongoURI, dbname) => new Promise((resolve, reject) => {
     console.log("Creating child process...");
-    let childprocess = fork("./child.js", [ url, collection, mongoURI, dbname ], {}, error => {
+    let childprocess = fork(__dirname+"child.js", [ url, collection, mongoURI, dbname ], {}, error => {
         console.error(error);
         reject(childprocess);
     });
@@ -48,18 +48,18 @@ const uploadManifestToDB = (url, collection, mongoURI, dbname) => new Promise((r
 
 //Check for openapi.json file in current directory. If it doesn't exist, fetch it from Bungie.
 console.log("Checking Bungie OpenAPI 3.0 Spec.");
-await fileExists("openapi.json")
+await fileExists(__dirname+"openapi.json")
 .catch(err => DownloadFile(openapiurl, __dirname+"openapi.json"));
 
 console.log("");
 
 //Check for manifest file. If it doesn't exist, fetch it from Bungie.
 console.log("Checking Bungie Manifest.");
-await fileExists("manifest.json")
+await fileExists(__dirname+"manifest.json")
 .catch(err => DownloadFile(bungiemanifesturl, __dirname+"manifest.json"));
 
 //load manifest file.
-const manifest = await readJSONFile("./manifest.json");
+const manifest = await readJSONFile(__dirname+"manifest.json");
 
 /*
     Spin off child processes for each json content file within the manifest. (this is due to the amount of memory each manifest takes to load)
