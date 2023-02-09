@@ -1,4 +1,4 @@
-import JSONMap from "./JsonMap.js";
+import JSONMap from "./JSONMap.js";
 
 export default class ConfigMap extends JSONMap {
     keywords = ["splice", "group", "filter", "link", "x-enum-reference", "x-mapped-definition"];

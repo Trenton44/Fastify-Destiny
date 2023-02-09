@@ -1,4 +1,4 @@
-import JSONMap from "./JsonMap.js";
+import JSONMap from "./JSONMap.js";
 
 export default class SwaggerMap extends JSONMap {
     
