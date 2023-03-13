@@ -24,6 +24,11 @@ for(let lang in manifestLanguages){
     manifests[lang] = await mongoDB.collection(lang);
 }
 
+process.on("exit", async (code) => {
+    console.log("server has terminated, closing localized manifest database.");
+    await mongoServer.stop();
+});
+
 export default async function loadData(keys, language="en"){
     // make a connection to manifest matching user's language
     if(!manifests[language])
