@@ -34,7 +34,7 @@ const DownloadFile = (url, location) => new Promise((resolve, reject) => {
 });
 const uploadManifestToDB = (url, collection, mongoURI, dbname) => new Promise((resolve, reject) => {
     console.log("Creating child process...");
-    let childprocess = fork("./child.js", [ url, collection, mongoURI, dbname ], {}, error => {
+    let childprocess = fork(__dirname+"child.js", [ url, collection, mongoURI, dbname ], {}, error => {
         console.error(error);
         reject(childprocess);
     });
@@ -48,18 +48,18 @@ const uploadManifestToDB = (url, collection, mongoURI, dbname) => new Promise((r
 
 //Check for openapi.json file in current directory. If it doesn't exist, fetch it from Bungie.
 console.log("Checking Bungie OpenAPI 3.0 Spec.");
-await fileExists("openapi.json")
+await fileExists(__dirname+"openapi.json")
 .catch(err => DownloadFile(openapiurl, __dirname+"openapi.json"));
 
 console.log("");
 
 //Check for manifest file. If it doesn't exist, fetch it from Bungie.
 console.log("Checking Bungie Manifest.");
-await fileExists("manifest.json")
+await fileExists(__dirname+"manifest.json")
 .catch(err => DownloadFile(bungiemanifesturl, __dirname+"manifest.json"));
 
 //load manifest file.
-const manifest = await readJSONFile("./manifest.json");
+const manifest = await readJSONFile(__dirname+"manifest.json");
 
 /*
     Spin off child processes for each json content file within the manifest. (this is due to the amount of memory each manifest takes to load)
@@ -67,11 +67,19 @@ const manifest = await readJSONFile("./manifest.json");
     One collection per language, so the "en" manifest data will be in the "en" collection.
 */
 let downloads = [];
+let supportedlanguages = {};
 Object.entries(manifest.Response.jsonWorldContentPaths).forEach(([key, value]) => {
-    downloads.push(uploadManifestToDB(bungiepath+value, key, mongoURI, DB_NAME).catch(child => child.kill(1)));
+    supportedlanguages[key] = false;
+    downloads.push(uploadManifestToDB(bungiepath+value, key, mongoURI, DB_NAME)
+    .then(res => {
+        console.log("Adding "+key+" to list of supported languages.");
+        supportedlanguages[key] = true;
+        return true;
+    }).catch(child => child.kill(1)));
 });
 // wait for all child processes to finish uploading data to local mongodb 
 await Promise.all(downloads);
 await mongoClose();
+await writeFile(__dirname+"languages.json", JSON.stringify(supportedlanguages));
 console.log("Manifest data successfully loaded!");
 process.exit(0);

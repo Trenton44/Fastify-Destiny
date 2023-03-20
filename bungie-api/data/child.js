@@ -1,11 +1,12 @@
 import https from "https";
-import JSONMap from "../utils/JsonMap.js";
+import JSONMap from "../utility/JSONMap.js";
 import { MongoClient } from "mongodb";
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Connect to local database "ManifestDB"
 console.log("Connecting to DB "+process.argv[4]);
+
 const db = await MongoClient.connect(process.argv[4], {
     useNewUrlParser: true,
     useUnifiedTopology: true,

@@ -23,7 +23,8 @@
     "predeploy": "node bungie-api/setup.js",
     "deploy": "node server.js",
     "generate-docs": "jsdoc -c ./jsdoc.json",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "init": "node bungie-api/data/setup.js"
   },
   "devDependencies": {
     "docdash": "^1.2.0",
