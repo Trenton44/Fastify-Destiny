@@ -35,12 +35,12 @@ const store = MongoStore.create({
     },
     crypto: {
         secret: process.env.SESSION_STORE_SECRET,
-        algorithm: process.env.ENCRYPTION_ALG,
-        hashing: process.env.ENCRYPTION_HASH,
-        encodeas: process.env.ENCRYPTION_ENCODER,
-        key_size: process.env.CRYPTO_KEY_SIZE,
-        iv_size: process.env.CRYTPO_IV_SIZE,
-        at_size: process.env.CRYPTO_AT_SIZE
+        algorithm: process.env.ENCRYPTION_ALG == undefined ? "aes-256-gcm" : process.env.ENCRYPTION_ALG,
+        hashing: process.env.ENCRYPTION_HASH == undefined ? "sha512WithRSAEncryption" : process.env.ENCRYPTION_HASH,
+        encodeas: process.env.ENCRYPTION_ENCODER == undefined ? "hex" : process.env.ENCRYPTION_ENCODER,
+        key_size: process.env.CRYPTO_KEY_SIZE == undefined ? 32 : process.env.CRYPTO_KEY_SIZE,
+        iv_size: process.env.CRYTPO_IV_SIZE == undefined ? 16 : process.env.CRYTPO_IV_SIZE,
+        at_size: process.env.CRYPTO_AT_SIZE == undefined ? 16 : process.env.CRYPTO_AT_SIZE
     }
 });
 
